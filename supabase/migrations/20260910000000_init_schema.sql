@@ -1,0 +1,216 @@
+-- Migration: 20260910000000_init_schema.sql
+-- Description: Initial schema for KisanSetu (SIH26032) by Team ODE TO CODE
+
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. Farmers
+CREATE TABLE IF NOT EXISTS public.farmers (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    phone VARCHAR(15) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    preferred_language VARCHAR(10) NOT NULL DEFAULT 'hi',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. Procurement Centres
+CREATE TABLE IF NOT EXISTS public.procurement_centres (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(150) NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'operational',
+    capacity INTEGER NOT NULL DEFAULT 500,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 3. Officer Profiles
+CREATE TABLE IF NOT EXISTS public.officer_profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    officer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    centre_id UUID NOT NULL REFERENCES public.procurement_centres(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL DEFAULT 'procurement_officer',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(officer_id, centre_id)
+);
+
+-- 4. Farmer Produce
+CREATE TABLE IF NOT EXISTS public.farmer_produce (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    farmer_id UUID NOT NULL REFERENCES public.farmers(id) ON DELETE CASCADE,
+    crop VARCHAR(100) NOT NULL,
+    quantity NUMERIC(10, 2) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 5. Bookings
+CREATE TABLE IF NOT EXISTS public.bookings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    farmer_id UUID NOT NULL REFERENCES public.farmers(id) ON DELETE CASCADE,
+    centre_id UUID NOT NULL REFERENCES public.procurement_centres(id) ON DELETE CASCADE,
+    produce_id UUID REFERENCES public.farmer_produce(id) ON DELETE SET NULL,
+    slot_time VARCHAR(50) NOT NULL,
+    arrival_time TIMESTAMPTZ,
+    token VARCHAR(20) NOT NULL UNIQUE,
+    status VARCHAR(50) NOT NULL DEFAULT 'booked',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 6. Queue Entries
+CREATE TABLE IF NOT EXISTS public.queue_entries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
+    position INTEGER NOT NULL DEFAULT 1,
+    people_ahead INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(50) NOT NULL DEFAULT 'waiting',
+    estimated_wait_minutes INTEGER NOT NULL DEFAULT 0,
+    expected_turn VARCHAR(50) NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 7. Procurement Records
+CREATE TABLE IF NOT EXISTS public.procurement_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
+    expected_quantity NUMERIC(10, 2) NOT NULL,
+    actual_quantity NUMERIC(10, 2),
+    quality_grade VARCHAR(20),
+    procurement_stage VARCHAR(50) NOT NULL DEFAULT 'gate_entry',
+    discrepancy BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 8. Payments
+CREATE TABLE IF NOT EXISTS public.payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE UNIQUE,
+    gross_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    deductions NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    net_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    payment_reference VARCHAR(100),
+    payment_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 9. Notifications
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    farmer_id UUID NOT NULL REFERENCES public.farmers(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 10. Disputes
+CREATE TABLE IF NOT EXISTS public.disputes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    farmer_id UUID NOT NULL REFERENCES public.farmers(id) ON DELETE CASCADE,
+    booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
+    category VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    tracking_id VARCHAR(50) NOT NULL UNIQUE,
+    status VARCHAR(50) NOT NULL DEFAULT 'submitted',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_farmers_phone ON public.farmers(phone);
+CREATE INDEX IF NOT EXISTS idx_bookings_farmer ON public.bookings(farmer_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_centre ON public.bookings(centre_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_token ON public.bookings(token);
+CREATE INDEX IF NOT EXISTS idx_queue_booking ON public.queue_entries(booking_id);
+CREATE INDEX IF NOT EXISTS idx_procurement_booking ON public.procurement_records(booking_id);
+CREATE INDEX IF NOT EXISTS idx_payments_booking ON public.payments(booking_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_farmer ON public.notifications(farmer_id);
+CREATE INDEX IF NOT EXISTS idx_disputes_farmer ON public.disputes(farmer_id);
+CREATE INDEX IF NOT EXISTS idx_officer_centre ON public.officer_profiles(officer_id, centre_id);
+
+-- Enable RLS
+ALTER TABLE public.farmers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.procurement_centres ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.officer_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.farmer_produce ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.queue_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.procurement_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.disputes ENABLE ROW LEVEL SECURITY;
+
+-- Helper function: check if current user is officer assigned to centre
+CREATE OR REPLACE FUNCTION public.is_officer_for_centre(target_centre_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.officer_profiles
+        WHERE officer_id = auth.uid()
+        AND centre_id = target_centre_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
+
+-- RLS Policies
+CREATE POLICY "Farmers can view own profile" ON public.farmers FOR SELECT USING (id = auth.uid());
+CREATE POLICY "Farmers can update own profile" ON public.farmers FOR UPDATE USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+CREATE POLICY "Farmers can insert own profile" ON public.farmers FOR INSERT WITH CHECK (id = auth.uid());
+
+CREATE POLICY "Anyone authenticated can view centres" ON public.procurement_centres FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Officers can view their own assignment" ON public.officer_profiles FOR SELECT USING (officer_id = auth.uid());
+
+CREATE POLICY "Farmers can view own produce" ON public.farmer_produce FOR SELECT USING (farmer_id = auth.uid());
+CREATE POLICY "Farmers can insert own produce" ON public.farmer_produce FOR INSERT WITH CHECK (farmer_id = auth.uid());
+CREATE POLICY "Farmers can update own produce" ON public.farmer_produce FOR UPDATE USING (farmer_id = auth.uid()) WITH CHECK (farmer_id = auth.uid());
+
+CREATE POLICY "Farmers can view own bookings" ON public.bookings FOR SELECT USING (farmer_id = auth.uid());
+CREATE POLICY "Farmers can create own bookings" ON public.bookings FOR INSERT WITH CHECK (farmer_id = auth.uid());
+CREATE POLICY "Officers can view bookings for their centre" ON public.bookings FOR SELECT USING (public.is_officer_for_centre(centre_id));
+CREATE POLICY "Officers can update bookings for their centre" ON public.bookings FOR UPDATE USING (public.is_officer_for_centre(centre_id)) WITH CHECK (public.is_officer_for_centre(centre_id));
+
+CREATE POLICY "Farmers can view queue for their bookings" ON public.queue_entries FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = queue_entries.booking_id AND bookings.farmer_id = auth.uid())
+);
+CREATE POLICY "Officers can view and update queue entries for their centre" ON public.queue_entries FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = queue_entries.booking_id AND public.is_officer_for_centre(bookings.centre_id))
+);
+
+CREATE POLICY "Farmers can view procurement records for their bookings" ON public.procurement_records FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = procurement_records.booking_id AND bookings.farmer_id = auth.uid())
+);
+CREATE POLICY "Officers can view and update records for their centre" ON public.procurement_records FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = procurement_records.booking_id AND public.is_officer_for_centre(bookings.centre_id))
+);
+
+CREATE POLICY "Farmers can view payments for their bookings" ON public.payments FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = payments.booking_id AND bookings.farmer_id = auth.uid())
+);
+CREATE POLICY "Officers can view and manage payments for their centre" ON public.payments FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = payments.booking_id AND public.is_officer_for_centre(bookings.centre_id))
+);
+
+CREATE POLICY "Farmers can view own notifications" ON public.notifications FOR SELECT USING (farmer_id = auth.uid());
+CREATE POLICY "Farmers can mark own notifications read" ON public.notifications FOR UPDATE USING (farmer_id = auth.uid()) WITH CHECK (farmer_id = auth.uid());
+
+CREATE POLICY "Farmers can view own disputes" ON public.disputes FOR SELECT USING (farmer_id = auth.uid());
+CREATE POLICY "Farmers can create disputes for their bookings" ON public.disputes FOR INSERT WITH CHECK (
+    farmer_id = auth.uid() AND EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = disputes.booking_id AND bookings.farmer_id = auth.uid())
+);
+CREATE POLICY "Officers can view and update disputes for their centre" ON public.disputes FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.bookings WHERE bookings.id = disputes.booking_id AND public.is_officer_for_centre(bookings.centre_id))
+);
+
+-- Realtime publication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.queue_entries;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.procurement_records;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.payments;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
