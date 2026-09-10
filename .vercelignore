@@ -1,0 +1,44 @@
+# Vercel Ignore File for KisanSetu Flutter Project
+
+# Build outputs and caches
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+
+# Mobile and Desktop platform directories (Vercel builds Web only)
+android/
+ios/
+linux/
+macos/
+windows/
+
+# Test directories and testing artifacts
+test/
+integration_test/
+
+# Local configuration and environment variables
+*.env
+*.env.*
+*.local
+.env
+.env.production
+.env.staging
+
+# Credentials & secrets
+*secret*
+*service_role*
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+
+# Logs
+*.log
