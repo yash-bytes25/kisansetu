@@ -55,6 +55,8 @@ app.*.map.json
 *.pem
 secrets.json
 supabase_keys.json
+run_supabase.bat
+run_supabase.ps1
 **/ephemeral/
 analyze_output.txt
 
