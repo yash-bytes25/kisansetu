@@ -54,9 +54,9 @@ tasks.matching { it.name.contains("NativeLibs") }.configureEach {
 
 tasks.register<Copy>("copyApkToProjectBuild") {
     from(layout.buildDirectory.dir("outputs/flutter-apk"))
-    into(rootProject.layout.projectDirectory.dir("../../build/app/outputs/flutter-apk"))
+    into(rootProject.layout.projectDirectory.dir("../build/app/outputs/flutter-apk"))
 }
 
-tasks.matching { it.name == "assembleDebug" }.configureEach {
+tasks.matching { it.name in listOf("assembleDebug", "assembleRelease") }.configureEach {
     finalizedBy("copyApkToProjectBuild")
 }
