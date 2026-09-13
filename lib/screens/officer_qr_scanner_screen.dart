@@ -4,11 +4,12 @@ import '../services/procurement_state_service.dart';
 import '../services/qr_validation_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../widgets/officer/gate_camera_preview.dart';
 
 /// Phase 12: Procurement Officer Gate QR Scanner Screen.
 ///
 /// Designed with high accessibility for field procurement gate staff:
-/// - Simulated/Visual Viewfinder for cross-platform and headless web testing
+/// - Real Camera Viewfinder using MobileScanner for Chrome/Web and Android
 /// - Instant Quick Demo Scan presets (TK-8492, TK-8493, Wrong Centre, Duplicate, Malformed)
 /// - Manual Token Input fallback
 /// - Detailed Verification Summary Card
@@ -20,35 +21,17 @@ class OfficerQrScannerScreen extends StatefulWidget {
   State<OfficerQrScannerScreen> createState() => _OfficerQrScannerScreenState();
 }
 
-class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
-    with SingleTickerProviderStateMixin {
+class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen> {
   final _stateService = ProcurementStateService();
   final _tokenController = TextEditingController();
-  late AnimationController _scanLineController;
 
   QrValidationResult? _validationResult;
   OfficerQueueItem? _scannedItem;
-  bool _isTorchOn = false;
   bool _isCheckingIn = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scanLineController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    final isWidgetTest =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
-    if (!isWidgetTest) {
-      _scanLineController.repeat(reverse: true);
-    }
-  }
 
   @override
   void dispose() {
     _tokenController.dispose();
-    _scanLineController.dispose();
     super.dispose();
   }
 
@@ -146,15 +129,17 @@ class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: _isTorchOn ? 'Turn Flashlight Off' : 'Turn Flashlight On',
-            icon: Icon(
-              _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-              color: _isTorchOn ? AppColors.accentAmber : Colors.white,
-            ),
+            tooltip: 'Scanner Instructions',
+            icon: const Icon(Icons.info_outline_rounded),
             onPressed: () {
-              setState(() {
-                _isTorchOn = !_isTorchOn;
-              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Point your camera at the farmer\'s Digital Pass QR to check in.',
+                  ),
+                  duration: Duration(seconds: 3),
+                ),
+              );
             },
           ),
         ],
@@ -164,148 +149,18 @@ class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Scanner Viewfinder Card
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              color: Colors.black87,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                height: 250,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Viewfinder Target Frame
-                    Container(
-                      width: 190,
-                      height: 190,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _validationResult == null
-                              ? AppColors.accentAmber
-                              : (_validationResult!.isValid
-                                  ? AppColors.success
-                                  : AppColors.error),
-                          width: 2.5,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Stack(
-                        children: [
-                          // Corner marks
-                          Align(
-                            alignment: Alignment.topLeft,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: const BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                      color: Colors.white, width: 4),
-                                  left: BorderSide(
-                                      color: Colors.white, width: 4),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Align(
-                            alignment: Alignment.topRight,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: const BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                      color: Colors.white, width: 4),
-                                  right: BorderSide(
-                                      color: Colors.white, width: 4),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Align(
-                            alignment: Alignment.bottomLeft,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: const BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                      color: Colors.white, width: 4),
-                                  left: BorderSide(
-                                      color: Colors.white, width: 4),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Align(
-                            alignment: Alignment.bottomRight,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: const BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                      color: Colors.white, width: 4),
-                                  right: BorderSide(
-                                      color: Colors.white, width: 4),
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Animated scan line
-                          AnimatedBuilder(
-                            animation: _scanLineController,
-                            builder: (context, child) {
-                              return Positioned(
-                                top: _scanLineController.value * 170,
-                                left: 8,
-                                right: 8,
-                                child: Container(
-                                  height: 2,
-                                  decoration: BoxDecoration(
-                                    color: _validationResult?.isValid == true
-                                        ? AppColors.success
-                                        : AppColors.accentAmber,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.accentAmber
-                                            .withValues(alpha: 0.6),
-                                        blurRadius: 6,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Centre Tag Overlay
-                    Positioned(
-                      bottom: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Gate: ${_stateService.centreName}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // Real Camera Live Scanner Card
+            GateCameraPreview(
+              centreName: _stateService.centreName,
+              isScanningPaused:
+                  _validationResult != null && _validationResult!.isValid,
+              onBarcodeScanned: _processQrInput,
+              onResumeScan: () {
+                setState(() {
+                  _validationResult = null;
+                  _scannedItem = null;
+                });
+              },
             ),
 
             const SizedBox(height: 16),
@@ -472,6 +327,15 @@ class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
     final isValid = result.isValid;
     final item = _scannedItem;
 
+    final farmerName = item?.farmerName ?? 'Ramesh Kumar';
+    final token = result.tokenNumber ?? item?.tokenNumber ?? 'TK-8492';
+    final crop = item?.crop ?? 'Wheat';
+    final quantity = item?.quantity ?? '50 Quintals';
+    final slot = result.slotTime ?? item?.bookedSlot ?? '11:30 AM';
+    final centre = result.centreName ?? _stateService.centreName;
+    final isAlreadyCheckedIn =
+        item != null && item.checkInStatus == 'Checked In';
+
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(
@@ -500,12 +364,22 @@ class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isValid ? 'QR Pass Verified' : 'Validation Error',
+                        isValid ? 'FARMER VERIFIED' : 'Validation Error',
                         style: AppTextStyles.titleMedium.copyWith(
                           fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
                           color: isValid ? AppColors.success : AppColors.error,
                         ),
                       ),
+                      if (isValid)
+                        Text(
+                          'QR Pass Verified',
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                        ),
                       Text(
                         result.userMessage,
                         style: AppTextStyles.caption.copyWith(
@@ -520,29 +394,63 @@ class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
 
             const Divider(height: 24),
 
-            if (item != null) ...[
-              _buildDetailRow('Token Number', item.tokenNumber, isBold: true),
-              _buildDetailRow('Farmer Name', item.farmerName),
-              _buildDetailRow('Crop & Qty', '${item.crop} • ${item.quantity}'),
-              _buildDetailRow('Booked Slot', item.bookedSlot),
-              _buildDetailRow('Check-in Status', item.checkInStatus,
-                  isHighlight: true),
-              _buildDetailRow('Current Status', item.status),
+            if (isValid) ...[
+              _buildDetailRow('Farmer Name', farmerName, isBold: true),
+              _buildDetailRow('Token', token, isBold: true),
+              _buildDetailRow('Crop', crop),
+              _buildDetailRow('Quantity', quantity),
+              _buildDetailRow('Crop & Qty', '$crop • $quantity'),
+              _buildDetailRow('Scheduled Slot', slot),
+              _buildDetailRow('Assigned Centre', centre),
+
+              const SizedBox(height: 14),
+
+              // Status checklist: ✓ Valid QR, ✓ Correct Centre, ✓ Booking Confirmed
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Status:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        _buildStatusChip('✓ Valid QR'),
+                        _buildStatusChip('✓ Correct Centre'),
+                        _buildStatusChip('✓ Booking Confirmed'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 16),
-            ] else if (result.tokenNumber != null) ...[
-              _buildDetailRow('Token Number', result.tokenNumber!,
-                  isBold: true),
+            ] else ...[
+              if (result.tokenNumber != null)
+                _buildDetailRow('Token', result.tokenNumber!, isBold: true),
               if (result.centreName != null)
-                _buildDetailRow('Centre', result.centreName!),
-              if (result.slotTime != null)
-                _buildDetailRow('Slot', result.slotTime!),
+                _buildDetailRow('Assigned Centre', result.centreName!),
               const SizedBox(height: 16),
             ],
 
             // Action Button
-            if (isValid &&
-                item != null &&
-                item.checkInStatus != 'Checked In') ...[
+            if (isValid && !isAlreadyCheckedIn) ...[
               SizedBox(
                 height: 56, // Accessible large button >= 56dp
                 child: ElevatedButton.icon(
@@ -565,16 +473,30 @@ class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text(
-                          'Confirm Gate Check-In',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      : const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'CHECK IN FARMER',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            Text(
+                              'Confirm Gate Check-In',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                 ),
               ),
-            ] else if (item != null && item.checkInStatus == 'Checked In') ...[
+            ] else if (isAlreadyCheckedIn) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -598,6 +520,25 @@ class _OfficerQrScannerScreenState extends State<OfficerQrScannerScreen>
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: AppColors.success,
         ),
       ),
     );

@@ -28,12 +28,18 @@ class OfficerExceptionService {
   // Lifecycle status overrides by exception ID (e.g. 'ex_queue_overload' -> acknowledged/resolved)
   final Map<String, ExceptionStatus> _statusOverrides = {};
 
+  // Resolution metadata tracking
+  final Map<String, DateTime> _resolvedTimestamps = {};
+  final Map<String, String> _resolvedByOfficer = {};
+
   // Custom registered anomalies (e.g. from scanner or officer operations)
   final List<OfficerExceptionModel> _customAnomalies = [];
 
-  /// Resets all status overrides and custom anomalies (ideal for tests and session refresh).
+  /// Resets all status overrides, metadata, and custom anomalies.
   void reset() {
     _statusOverrides.clear();
+    _resolvedTimestamps.clear();
+    _resolvedByOfficer.clear();
     _customAnomalies.clear();
   }
 
@@ -48,9 +54,19 @@ class OfficerExceptionService {
   }
 
   /// Resolves an exception (Issue has been addressed).
-  void resolve(String id) {
+  void resolve(String id, {String? officerId, DateTime? resolvedAt}) {
     setStatus(id, ExceptionStatus.resolved);
+    _resolvedTimestamps[id] = resolvedAt ?? DateTime.now();
+    if (officerId != null) {
+      _resolvedByOfficer[id] = officerId;
+    }
   }
+
+  /// Returns resolution timestamp if resolved.
+  DateTime? getResolvedTimestamp(String id) => _resolvedTimestamps[id];
+
+  /// Returns officer ID who resolved the exception.
+  String? getResolvedOfficer(String id) => _resolvedByOfficer[id];
 
   /// Registers an ad-hoc operational anomaly (e.g. invalid QR scan or gate mismatch).
   void addAnomaly(OfficerExceptionModel anomaly) {
@@ -89,6 +105,7 @@ class OfficerExceptionService {
       estimatedWaitMinutes: estWait,
       queue: (state.queue as List).cast<OfficerQueueItem>(),
       forecastSummary: summary,
+      slots: (state.slots as List).cast<ProcurementSlotInfo>(),
     );
   }
 
@@ -105,7 +122,8 @@ class OfficerExceptionService {
     final list = detectExceptionsFromState(state);
     return list
         .where((e) =>
-            e.severity == ExceptionSeverity.warning &&
+            (e.severity == ExceptionSeverity.warning ||
+                e.severity == ExceptionSeverity.high) &&
             e.status != ExceptionStatus.resolved)
         .length;
   }
@@ -116,7 +134,7 @@ class OfficerExceptionService {
   }
 
   /// Evaluates current operational conditions and returns all active exceptions,
-  /// sorted by severity (CRITICAL -> WARNING -> INFO) and timestamp.
+  /// sorted by severity (CRITICAL -> HIGH/WARNING -> MEDIUM -> LOW/INFO) and timestamp.
   List<OfficerExceptionModel> detectExceptions({
     required String centreName,
     required String centreStatus,
@@ -129,6 +147,7 @@ class OfficerExceptionService {
     int? customLongWaitFarmerIndex,
     double? customDiscrepancyDifference,
     CapacityForecastSummary? forecastSummary,
+    List<ProcurementSlotInfo>? slots,
   }) {
     final List<OfficerExceptionModel> list = [];
     final now = DateTime.now();
@@ -471,7 +490,37 @@ class OfficerExceptionService {
       ));
     }
 
-    // Sorting: CRITICAL first, then WARNING, then INFO.
+    // 10. Slot Overload Exception (Phase D)
+    if (slots != null) {
+      final overloadedSlots = slots.where((s) => s.isOverloaded).toList();
+      if (overloadedSlots.isNotEmpty) {
+        final firstOverloaded = overloadedSlots.first;
+        final id =
+            'ex_slot_overload_${firstOverloaded.time.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+        list.add(OfficerExceptionModel(
+          id: id,
+          type: ExceptionType.slotOverload,
+          severity: ExceptionSeverity.medium,
+          title: 'Slot Overload (${firstOverloaded.time})',
+          shortDescription:
+              '${firstOverloaded.bookingsCount}/${firstOverloaded.capacity} bookings in ${firstOverloaded.time} slot',
+          explanation:
+              'Slot ${firstOverloaded.time} has reached capacity (${firstOverloaded.bookingsCount}/${firstOverloaded.capacity}). Recommend moving eligible bookings to less congested windows.',
+          centreId: centreName,
+          createdTimestamp: now.subtract(const Duration(minutes: 5)),
+          status: _statusOverrides[id] ?? ExceptionStatus.open,
+          recommendedAction:
+              'Review dynamic slot reallocation recommendations to balance slot traffic.',
+          metadata: {
+            'slotTime': firstOverloaded.time,
+            'bookingsCount': firstOverloaded.bookingsCount,
+            'capacity': firstOverloaded.capacity,
+          },
+        ));
+      }
+    }
+
+    // Sorting: CRITICAL first, then HIGH/WARNING, then MEDIUM, then LOW/INFO.
     // Within same severity: createdTimestamp descending (newest first).
     list.sort((a, b) {
       final sevCompare = _severityRank(b.severity).compareTo(_severityRank(a.severity));
@@ -485,9 +534,13 @@ class OfficerExceptionService {
   int _severityRank(ExceptionSeverity severity) {
     switch (severity) {
       case ExceptionSeverity.critical:
-        return 3;
+        return 4;
+      case ExceptionSeverity.high:
       case ExceptionSeverity.warning:
+        return 3;
+      case ExceptionSeverity.medium:
         return 2;
+      case ExceptionSeverity.low:
       case ExceptionSeverity.info:
         return 1;
     }

@@ -1,22 +1,85 @@
 -- =============================================================================
--- KISANSETU (SIH26032) - DEVELOPMENT SEED SCRIPT
+-- KISANSETU (SIH26032) - DEVELOPMENT & EVALUATION SEED SCRIPT
 -- Team: ODE TO CODE
--- Description: Development and staging seed data for verifying end-to-end flows.
--- Demonstrates: Ramesh Kumar, Wheat produce, Procurement Centre, Booking,
--- Queue entries, Procurement record, Payment record, Notifications, and Dispute.
--- NOTE: Never execute in production environments with live farmer identities.
+--
+-- IMPORTANT DEMO & REFERENCE DATA NOTICE:
+-- 1. ALL DATA IN THIS SCRIPT IS STRICTLY MOCK / DEMO DATA INTENDED SOLELY FOR
+--    SIH JUDGE EVALUATION, STAGING, AND LOCAL INTEGRATION TESTING.
+-- 2. ZERO REAL PII: Contains NO real farmer identities, NO actual Aadhaar
+--    numbers, NO valid bank account credentials, and NO confidential details.
+-- 3. MSP BENCHMARK RATES: All MSP values used are official reference benchmarks
+--    aligned with Government of India CCEA pricing (2024-25 / 2025-26) for
+--    calculating transparent simulated procurement values.
+-- 4. SIMULATION BOUNDARIES: Digital QR check-in, dynamic queues, and DBT payment
+--    records in this database reflect simulated workflow prototypes. They do
+--    not connect to live SMS telecommunication gateways or banking clearinghouses.
+-- 5. DO NOT EXECUTE AGAINST PRODUCTION SERVERS WITH LIVE GOVERNMENT DATA.
 -- =============================================================================
 
--- Clean existing demo records if present
 DO $$
 DECLARE
-    v_centre_id UUID := '11111111-1111-1111-1111-111111111111';
-    v_farmer_id UUID := '22222222-2222-2222-2222-222222222222';
-    v_officer_id UUID := '33333333-3333-3333-3333-333333333333';
-    v_produce_id UUID := '44444444-4444-4444-4444-444444444444';
-    v_booking_id UUID := '55555555-5555-5555-5555-555555555555';
+    v_centre_id   UUID := '11111111-1111-1111-1111-111111111111'; -- Khanna Grain Market
+    v_centre_2_id UUID := '11111111-1111-1111-1111-111111111112'; -- Samrala Sub-Yard (Grain Silo)
+    v_farmer_id   UUID := '22222222-2222-2222-2222-222222222222'; -- Ramesh Kumar
+    v_officer_id  UUID := '33333333-3333-3333-3333-333333333333'; -- Officer 001
+    v_produce_id  UUID := '44444444-4444-4444-4444-444444444444'; -- Wheat 50 Qtl
+    v_booking_id  UUID := '55555555-5555-5555-5555-555555555555'; -- TK-8492
 BEGIN
-    -- 1. Procurement Centre
+    -- 0. Safe Demo Auth Users (Creates auth records if run via Supabase SQL Editor)
+    -- This ensures foreign key constraints on farmers.id and officer_profiles.officer_id are satisfied
+    BEGIN
+        INSERT INTO auth.users (
+            instance_id,
+            id,
+            aud,
+            role,
+            email,
+            encrypted_password,
+            email_confirmed_at,
+            phone,
+            phone_confirmed_at,
+            raw_app_meta_data,
+            raw_user_meta_data,
+            created_at,
+            updated_at
+        ) VALUES 
+        (
+            '00000000-0000-0000-0000-000000000000',
+            v_farmer_id,
+            'authenticated',
+            'authenticated',
+            'farmer.ramesh@kisansetu.demo',
+            crypt('demo123456', gen_salt('bf')),
+            NOW(),
+            '9876543210',
+            NOW(),
+            '{"provider":"phone","providers":["phone"]}',
+            '{"name":"Ramesh Kumar","phone":"9876543210","role":"farmer"}',
+            NOW(),
+            NOW()
+        ),
+        (
+            '00000000-0000-0000-0000-000000000000',
+            v_officer_id,
+            'authenticated',
+            'authenticated',
+            'officer001@kisansetu.gov.in',
+            crypt('demo123456', gen_salt('bf')),
+            NOW(),
+            NULL,
+            NULL,
+            '{"provider":"email","providers":["email"]}',
+            '{"name":"Demo Procurement Officer","role":"officer","officer_id":"OFFICER001","centre_id":"11111111-1111-1111-1111-111111111111"}',
+            NOW(),
+            NOW()
+        ) ON CONFLICT (id) DO NOTHING;
+    EXCEPTION
+        WHEN insufficient_privilege THEN
+            -- In restricted environments where auth.users is managed strictly through dashboard
+            NULL;
+    END;
+
+    -- 1. Primary Procurement Centre (Khanna Grain Market)
     INSERT INTO public.procurement_centres (
         id, name, location, status, capacity, operating_status, current_load_percent, delay_minutes, processing_rate_per_hour
     ) VALUES (
@@ -34,11 +97,45 @@ BEGIN
         location = EXCLUDED.location,
         status = EXCLUDED.status,
         capacity = EXCLUDED.capacity,
-        current_load_percent = EXCLUDED.current_load_percent;
+        operating_status = EXCLUDED.operating_status,
+        current_load_percent = EXCLUDED.current_load_percent,
+        delay_minutes = EXCLUDED.delay_minutes,
+        processing_rate_per_hour = EXCLUDED.processing_rate_per_hour;
 
-    -- 2. Farmer Profile (Ramesh Kumar)
-    -- Assumes a corresponding auth.users row exists in a real environment
-    -- For local seed scripts, this provides the public profile representation
+    -- 1.1 Secondary Alternative Procurement Centre (Samrala Sub-Yard)
+    -- Seeds alternative centre to demonstrate Dynamic Centre Recommendations
+    INSERT INTO public.procurement_centres (
+        id, name, location, status, capacity, operating_status, current_load_percent, delay_minutes, processing_rate_per_hour
+    ) VALUES (
+        v_centre_2_id,
+        'Samrala Sub-Yard (Grain Silo)',
+        'Samrala Bypass Road, Ludhiana, Punjab - 141114',
+        'operational',
+        400,
+        'operational',
+        30,
+        0,
+        18
+    ) ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        location = EXCLUDED.location,
+        status = EXCLUDED.status,
+        capacity = EXCLUDED.capacity,
+        operating_status = EXCLUDED.operating_status,
+        current_load_percent = EXCLUDED.current_load_percent,
+        delay_minutes = EXCLUDED.delay_minutes,
+        processing_rate_per_hour = EXCLUDED.processing_rate_per_hour;
+
+    -- 2. Officer Profile (Officer001 -> Khanna Grain Market)
+    INSERT INTO public.officer_profiles (
+        officer_id, centre_id, role
+    ) VALUES (
+        v_officer_id,
+        v_centre_id,
+        'procurement_officer'
+    ) ON CONFLICT (officer_id, centre_id) DO NOTHING;
+
+    -- 3. Farmer Profile (Ramesh Kumar - Demo Persona)
     INSERT INTO public.farmers (
         id, phone, name, preferred_language, created_at, updated_at
     ) VALUES (
@@ -53,7 +150,7 @@ BEGIN
         phone = EXCLUDED.phone,
         preferred_language = EXCLUDED.preferred_language;
 
-    -- 3. Farmer Produce
+    -- 4. Farmer Produce (Default: Wheat, 50 Quintals)
     INSERT INTO public.farmer_produce (
         id, farmer_id, crop, quantity, created_at, updated_at
     ) VALUES (
@@ -67,7 +164,7 @@ BEGIN
         crop = EXCLUDED.crop,
         quantity = EXCLUDED.quantity;
 
-    -- 4. Booking
+    -- 5. Active Demo Booking (Token: TK-8492)
     INSERT INTO public.bookings (
         id, farmer_id, centre_id, produce_id, slot_time, arrival_time, token, status, created_at, updated_at
     ) VALUES (
@@ -85,7 +182,7 @@ BEGIN
         token = EXCLUDED.token,
         status = EXCLUDED.status;
 
-    -- 5. Queue Entry
+    -- 6. Live Queue Entry (Position 7, 6 ahead, ~35 min wait)
     INSERT INTO public.queue_entries (
         id, booking_id, position, people_ahead, status, estimated_wait_minutes, expected_turn, updated_at
     ) VALUES (
@@ -104,7 +201,7 @@ BEGIN
         estimated_wait_minutes = EXCLUDED.estimated_wait_minutes,
         expected_turn = EXCLUDED.expected_turn;
 
-    -- 6. Procurement Record
+    -- 7. Procurement Record (Gate entry completed, assaying underway)
     INSERT INTO public.procurement_records (
         id, booking_id, expected_quantity, actual_quantity, quality_grade, procurement_stage, discrepancy, created_at, updated_at
     ) VALUES (
@@ -122,7 +219,7 @@ BEGIN
         quality_grade = EXCLUDED.quality_grade,
         procurement_stage = EXCLUDED.procurement_stage;
 
-    -- 7. Payment Record
+    -- 8. Payment Record (₹1,14,205 at CCEA 2024-25 Wheat MSP ₹2,275/qtl)
     INSERT INTO public.payments (
         id, booking_id, gross_amount, deductions, net_amount, payment_status, payment_reference, payment_date, created_at, updated_at
     ) VALUES (
@@ -140,7 +237,7 @@ BEGIN
         net_amount = EXCLUDED.net_amount,
         payment_status = EXCLUDED.payment_status;
 
-    -- 8. Notifications
+    -- 9. Proactive Notifications (Booking Confirmed & Go-Time)
     INSERT INTO public.notifications (
         id, farmer_id, type, title, message, is_read, created_at
     ) VALUES (
@@ -165,7 +262,7 @@ BEGIN
         NOW() - INTERVAL '30 minutes'
     ) ON CONFLICT (id) DO NOTHING;
 
-    -- 9. Dispute
+    -- 10. Sample Dispute Record (Tracked grievance resolution demonstration)
     INSERT INTO public.disputes (
         id, farmer_id, booking_id, category, description, tracking_id, status, created_at, updated_at
     ) VALUES (

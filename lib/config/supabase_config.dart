@@ -44,6 +44,60 @@ class BookingLifecycleStatus {
 
   static bool isValid(String status) =>
       all.any((s) => s.toLowerCase() == status.toLowerCase());
+
+  /// Enforces valid booking lifecycle state machine transitions.
+  /// Prevents invalid transitions such as reverting from terminal states (COMPLETED, CANCELLED, etc.).
+  static bool canTransition(String currentStatus, String targetStatus) {
+    final cur = currentStatus.toUpperCase().trim();
+    final tgt = targetStatus.toUpperCase().trim();
+
+    if (!isValid(cur) || !isValid(tgt)) return false;
+    if (cur == tgt) return true; // Idempotent
+
+    switch (cur) {
+      case booked:
+        return tgt == approved ||
+            tgt == checkedIn ||
+            tgt == waiting ||
+            tgt == standby ||
+            tgt == cancelled ||
+            tgt == expired ||
+            tgt == noShow;
+      case approved:
+        return tgt == checkedIn ||
+            tgt == waiting ||
+            tgt == standby ||
+            tgt == cancelled ||
+            tgt == expired ||
+            tgt == noShow;
+      case checkedIn:
+        return tgt == waiting ||
+            tgt == processing ||
+            tgt == standby ||
+            tgt == cancelled;
+      case waiting:
+        return tgt == processing ||
+            tgt == standby ||
+            tgt == cancelled ||
+            tgt == noShow;
+      case processing:
+        return tgt == completed || tgt == cancelled;
+      case standby:
+        return tgt == approved ||
+            tgt == checkedIn ||
+            tgt == waiting ||
+            tgt == cancelled ||
+            tgt == expired;
+      case completed:
+      case cancelled:
+      case expired:
+      case noShow:
+        // Terminal states cannot transition back to active operations
+        return false;
+      default:
+        return false;
+    }
+  }
 }
 
 /// Status definitions for transparent MSP payments.
@@ -70,6 +124,35 @@ class PaymentLifecycleStatus {
 
   static bool isValid(String status) =>
       all.any((s) => s.toLowerCase() == status.toLowerCase());
+
+  /// Enforces transparent MSP payment lifecycle transitions.
+  static bool canTransition(String currentStatus, String targetStatus) {
+    final cur = currentStatus.toUpperCase().trim();
+    final tgt = targetStatus.toUpperCase().trim();
+
+    if (!isValid(cur) || !isValid(tgt)) return false;
+    if (cur == tgt) return true; // Idempotent
+
+    switch (cur) {
+      case notEligible:
+        return tgt == pending;
+      case pending:
+        return tgt == initiated || tgt == processing || tgt == notEligible || tgt == failed;
+      case initiated:
+        return tgt == processing || tgt == failed;
+      case processing:
+        return tgt == success || tgt == failed;
+      case failed:
+        return tgt == initiated || tgt == processing || tgt == pending;
+      case success:
+        return tgt == reversed;
+      case reversed:
+        // Terminal state
+        return false;
+      default:
+        return false;
+    }
+  }
 }
 
 /// Central configuration for Supabase integration and backend mode selection.

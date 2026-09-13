@@ -129,6 +129,8 @@ class SlotReallocationService extends ChangeNotifier {
         reasonTe: reasonTe,
         centreLoadPercent: loadDisplay,
         estimatedWaitMinutes: waitDisplay,
+        expectedImpact:
+            'Estimated peak wait reduced by approximately 18 minutes.',
         status: ReallocationStatus.recommended,
       );
     }

@@ -1,0 +1,1367 @@
+{
+  "version": "1.0",
+  "source": "Local Government Directory (LGD), Ministry of Panchayati Raj, Govt of India",
+  "states": [
+    {
+      "id": "andaman_and_nicobar_islands",
+      "name_en": "Andaman and Nicobar Islands",
+      "name_hi": "अंडमान और निकोबार द्वीप समूह",
+      "name_te": "అండమాన్ మరియు నికోబార్ దీవులు",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "south_andaman",
+          "name_en": "South Andaman",
+          "name_hi": "दक्षिण अंडमान",
+          "name_te": "దక్షిణ అండమాన్",
+          "mandals": [
+            {"id": "port_blair", "name_en": "Port Blair", "name_hi": "पोर्ट ब्लेयर", "name_te": "పోర్ట్ బ్లెయిర్"},
+            {"id": "ferrargunj", "name_en": "Ferrargunj", "name_hi": "फेरारगंज", "name_te": "ఫెరార్‌గంజ్"},
+            {"id": "little_andaman", "name_en": "Little Andaman", "name_hi": "लिटिल अंडमान", "name_te": "లిటిల్ అండమాన్"}
+          ]
+        },
+        {
+          "id": "north_and_middle_andaman",
+          "name_en": "North and Middle Andaman",
+          "name_hi": "उत्तर और मध्य अंडमान",
+          "name_te": "ఉత్తర మరియు మధ్య అండమాన్",
+          "mandals": [
+            {"id": "diglipur", "name_en": "Diglipur", "name_hi": "दिगलीपुर", "name_te": "దిగ్లిపూర్"},
+            {"id": "mayabunder", "name_en": "Mayabunder", "name_hi": "मायाबंदर", "name_te": "మాయాబందర్"},
+            {"id": "rangat", "name_en": "Rangat", "name_hi": "रंगत", "name_te": "రంగత్"}
+          ]
+        },
+        {
+          "id": "nicobar",
+          "name_en": "Nicobar",
+          "name_hi": "निकोबार",
+          "name_te": "నికోబార్",
+          "mandals": [
+            {"id": "car_nicobar", "name_en": "Car Nicobar", "name_hi": "कार निकोबार", "name_te": "కార్ నికోబార్"},
+            {"id": "nancowry", "name_en": "Nancowry", "name_hi": "नानकौरी", "name_te": "నాన్కోవ్రీ"},
+            {"id": "great_nicobar", "name_en": "Great Nicobar", "name_hi": "ग्रेट निकोबार", "name_te": "గ్రేట్ నికోబార్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "andhra_pradesh",
+      "name_en": "Andhra Pradesh",
+      "name_hi": "आंध्र प्रदेश",
+      "name_te": "ఆంధ్రప్రదేశ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "guntur",
+          "name_en": "Guntur",
+          "name_hi": "गुंटूर",
+          "name_te": "గుంటూరు",
+          "mandals": [
+            {"id": "guntur_east", "name_en": "Guntur East", "name_hi": "गुंटूर पूर्व", "name_te": "గుంటూరు తూర్పు"},
+            {"id": "guntur_west", "name_en": "Guntur West", "name_hi": "गुंटूर पश्चिम", "name_te": "గుంటూరు పశ్చిమ"},
+            {"id": "tenali", "name_en": "Tenali", "name_hi": "तेनाली", "name_te": "తెనాలి"},
+            {"id": "mangalagiri", "name_en": "Mangalagiri", "name_hi": "मंगलागिरి", "name_te": "మంగళగిరి"},
+            {"id": "tadikonda", "name_en": "Tadikonda", "name_hi": "ताडिकोंडा", "name_te": "తాడికొండ"}
+          ]
+        },
+        {
+          "id": "krishna",
+          "name_en": "Krishna",
+          "name_hi": "कृष्णा",
+          "name_te": "కృష్ణా",
+          "mandals": [
+            {"id": "machilipatnam", "name_en": "Machilipatnam", "name_hi": "मछिलिपटनम", "name_te": "మచిలీపట్నం"},
+            {"id": "gudivada", "name_en": "Gudivada", "name_hi": "गुड़ीवाड़ा", "name_te": "గుడివాడ"},
+            {"id": "vijayawada_urban", "name_en": "Vijayawada Urban", "name_hi": "विजयवाड़ा शहरी", "name_te": "విజయవాడ అర్బన్"},
+            {"id": "kankipadu", "name_en": "Kankipadu", "name_hi": "कंकीपाडु", "name_te": "కంకిపాడు"}
+          ]
+        },
+        {
+          "id": "visakhapatnam",
+          "name_en": "Visakhapatnam",
+          "name_hi": "विशाखापत्तनम",
+          "name_te": "విశాఖపట్నం",
+          "mandals": [
+            {"id": "anandapuram", "name_en": "Anandapuram", "name_hi": "आनंदपुरम", "name_te": "ఆనందపురం"},
+            {"id": "bheemunipatnam", "name_en": "Bheemunipatnam", "name_hi": "भीमुनिपटनम", "name_te": "భీమునిపట్నం"},
+            {"id": "gajuwaka", "name_en": "Gajuwaka", "name_hi": "गाजुवाका", "name_te": "గాజువాక"},
+            {"id": "pendurthi", "name_en": "Pendurthi", "name_hi": "पेन्दुर्ती", "name_te": "పెందుర్తి"}
+          ]
+        },
+        {
+          "id": "kurnool",
+          "name_en": "Kurnool",
+          "name_hi": "कर्नूल",
+          "name_te": "కర్నూలు",
+          "mandals": [
+            {"id": "kurnool_urban", "name_en": "Kurnool Urban", "name_hi": "कर्नूल शहरी", "name_te": "కర్నూలు అర్బన్"},
+            {"id": "adoni", "name_en": "Adoni", "name_hi": "अदोनी", "name_te": "ఆదోని"},
+            {"id": "yemmiganur", "name_en": "Yemmiganur", "name_hi": "येम्मिगनूर", "name_te": "ఎమ్మిగనూరు"},
+            {"id": "dhone", "name_en": "Dhone", "name_hi": "ढोन", "name_te": "డోన్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arunachal_pradesh",
+      "name_en": "Arunachal Pradesh",
+      "name_hi": "अरुणाचल प्रदेश",
+      "name_te": "అరుణాచల్ ప్రదేశ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "papum_pare",
+          "name_en": "Papum Pare",
+          "name_hi": "पापुम पारे",
+          "name_te": "పాపుమ్ పారే",
+          "mandals": [
+            {"id": "itanagar", "name_en": "Itanagar", "name_hi": "ईटानगर", "name_te": "ఇటానగర్"},
+            {"id": "naharlagun", "name_en": "Naharlagun", "name_hi": "नाहरलागुन", "name_te": "నహర్లాగన్"},
+            {"id": "sagalee", "name_en": "Sagalee", "name_hi": "सागाली", "name_te": "సాగాలీ"}
+          ]
+        },
+        {
+          "id": "changlang",
+          "name_en": "Changlang",
+          "name_hi": "चांगलांग",
+          "name_te": "చాంగ్లాంగ్",
+          "mandals": [
+            {"id": "changlang_hqr", "name_en": "Changlang Hqr", "name_hi": "चांगलांग मुख्यालय", "name_te": "చాంగ్లాంగ్ హెడ్‌క్వార్టర్స్"},
+            {"id": "miao", "name_en": "Miao", "name_hi": "मियाओ", "name_te": "మియావో"},
+            {"id": "jairampur", "name_en": "Jairampur", "name_hi": "जयरामपुर", "name_te": "జయరాంపూర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "assam",
+      "name_en": "Assam",
+      "name_hi": "असम",
+      "name_te": "అస్సాం",
+      "type": "state",
+      "districts": [
+        {
+          "id": "kamrup_metropolitan",
+          "name_en": "Kamrup Metropolitan",
+          "name_hi": "कामरूप मेट्रोपॉलिटन",
+          "name_te": "కామరూప్ మెట్రోపాలిటన్",
+          "mandals": [
+            {"id": "guwahati", "name_en": "Guwahati", "name_hi": "गुवाहाटी", "name_te": "గౌహతి"},
+            {"id": "dispur", "name_en": "Dispur", "name_hi": "दिसपुर", "name_te": "దిస్పూర్"},
+            {"id": "azara", "name_en": "Azara", "name_hi": "अजरा", "name_te": "అజరా"},
+            {"id": "chandrapur", "name_en": "Chandrapur", "name_hi": "चंद्रपुर", "name_te": "చంద్రపూర్"}
+          ]
+        },
+        {
+          "id": "nagaon",
+          "name_en": "Nagaon",
+          "name_hi": "नगांव",
+          "name_te": "నగావ్",
+          "mandals": [
+            {"id": "nagaon_sadar", "name_en": "Nagaon Sadar", "name_hi": "नगांव सदर", "name_te": "నగావ్ సదర్"},
+            {"id": "kaliabor", "name_en": "Kaliabor", "name_hi": "कलियाबोर", "name_te": "కలియాబోర్"},
+            {"id": "samaguri", "name_en": "Samaguri", "name_hi": "सामागुरी", "name_te": "సమగురి"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bihar",
+      "name_en": "Bihar",
+      "name_hi": "बिहार",
+      "name_te": "బీహార్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "patna",
+          "name_en": "Patna",
+          "name_hi": "पटना",
+          "name_te": "పాట్నా",
+          "mandals": [
+            {"id": "patna_sadar", "name_en": "Patna Sadar", "name_hi": "पटना सदर", "name_te": "పాట్నా సదర్"},
+            {"id": "barh", "name_en": "Barh", "name_hi": "बाढ़", "name_te": "బర్హ్"},
+            {"id": "danapur", "name_en": "Danapur", "name_hi": "दानापुर", "name_te": "దానాపూర్"},
+            {"id": "masaurhi", "name_en": "Masaurhi", "name_hi": "मसौढ़ी", "name_te": "మసౌర్హి"},
+            {"id": "mokama", "name_en": "Mokama", "name_hi": "मोकामा", "name_te": "మోకమ"}
+          ]
+        },
+        {
+          "id": "gaya",
+          "name_en": "Gaya",
+          "name_hi": "गया",
+          "name_te": "గయా",
+          "mandals": [
+            {"id": "gaya_town", "name_en": "Gaya Town", "name_hi": "गया नगर", "name_te": "గయా టౌన్"},
+            {"id": "bodh_gaya", "name_en": "Bodh Gaya", "name_hi": "बोध गया", "name_te": "బోధ్ గయా"},
+            {"id": "sherghati", "name_en": "Sherghati", "name_hi": "शेरघाटी", "name_te": "షేర్ఘటి"}
+          ]
+        },
+        {
+          "id": "muzaffarpur",
+          "name_en": "Muzaffarpur",
+          "name_hi": "मुजफ्फरपुर",
+          "name_te": "ముజఫర్‌పూర్",
+          "mandals": [
+            {"id": "musahari", "name_en": "Musahari", "name_hi": "मुसहरी", "name_te": "ముసహరి"},
+            {"id": "kanti", "name_en": "Kanti", "name_hi": "कांटी", "name_te": "కాంతి"},
+            {"id": "motipur", "name_en": "Motipur", "name_hi": "मोतीपुर", "name_te": "మోతీపూర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chandigarh",
+      "name_en": "Chandigarh",
+      "name_hi": "चंडीगढ़",
+      "name_te": "చండీగఢ్",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "chandigarh",
+          "name_en": "Chandigarh",
+          "name_hi": "चंडीगढ़",
+          "name_te": "చండీగఢ్",
+          "mandals": [
+            {"id": "chandigarh_central", "name_en": "Chandigarh Central", "name_hi": "चंडीगढ़ मध्य", "name_te": "చండీగఢ్ సెంట్రల్"},
+            {"id": "manimajra", "name_en": "Manimajra", "name_hi": "मणिमाजरा", "name_te": "మణిమజ్రా"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chhattisgarh",
+      "name_en": "Chhattisgarh",
+      "name_hi": "छत्तीसगढ़",
+      "name_te": "ఛత్తీస్‌గఢ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "raipur",
+          "name_en": "Raipur",
+          "name_hi": "रायपुर",
+          "name_te": "రాయ్‌పూర్",
+          "mandals": [
+            {"id": "raipur_sadar", "name_en": "Raipur Sadar", "name_hi": "रायपुर सदर", "name_te": "రాయ్‌పూర్ సదర్"},
+            {"id": "arang", "name_en": "Arang", "name_hi": "आरंग", "name_te": "ఆరంగ్"},
+            {"id": "abhanpur", "name_en": "Abhanpur", "name_hi": "अभनपुर", "name_te": "అభన్‌పూర్"},
+            {"id": "tilda", "name_en": "Tilda", "name_hi": "तिल्दा", "name_te": "తిల్దా"}
+          ]
+        },
+        {
+          "id": "durg",
+          "name_en": "Durg",
+          "name_hi": "दुर्ग",
+          "name_te": "దుర్గ్",
+          "mandals": [
+            {"id": "durg_sadar", "name_en": "Durg Sadar", "name_hi": "दुर्ग सदर", "name_te": "దుర్గ్ సదర్"},
+            {"id": "bhilai", "name_en": "Bhilai", "name_hi": "भिलाई", "name_te": "భిలాయ్"},
+            {"id": "patan", "name_en": "Patan", "name_hi": "पाटन", "name_te": "పటాన్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dadra_and_nagar_haveli_and_daman_and_diu",
+      "name_en": "Dadra and Nagar Haveli and Daman and Diu",
+      "name_hi": "दादरा और नगर हवेली और दमन और दीव",
+      "name_te": "దాద్రా మరియు నగర్ హవేలీ మరియు డామన్ మరియు డయ్యూ",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "daman",
+          "name_en": "Daman",
+          "name_hi": "दमन",
+          "name_te": "డామన్",
+          "mandals": [
+            {"id": "daman_hqr", "name_en": "Daman Hqr", "name_hi": "दमन मुख्यालय", "name_te": "డామన్ హెడ్‌క్వార్టర్స్"}
+          ]
+        },
+        {
+          "id": "diu",
+          "name_en": "Diu",
+          "name_hi": "दीव",
+          "name_te": "డయ్యూ",
+          "mandals": [
+            {"id": "diu_hqr", "name_en": "Diu Hqr", "name_hi": "दीव मुख्यालय", "name_te": "డయ్యూ హెడ్‌క్వార్టర్స్"}
+          ]
+        },
+        {
+          "id": "dadra_and_nagar_haveli",
+          "name_en": "Dadra and Nagar Haveli",
+          "name_hi": "दादरा और नगर हवेली",
+          "name_te": "దాద్రా మరియు నగర్ హవేలీ",
+          "mandals": [
+            {"id": "silvassa", "name_en": "Silvassa", "name_hi": "सिलवासा", "name_te": "సిల్వస్సా"},
+            {"id": "khanvel", "name_en": "Khanvel", "name_hi": "खानवेल", "name_te": "ఖాన్వెల్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "delhi",
+      "name_en": "Delhi",
+      "name_hi": "दिल्ली",
+      "name_te": "ఢిల్లీ",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "new_delhi",
+          "name_en": "New Delhi",
+          "name_hi": "नई दिल्ली",
+          "name_te": "న్యూఢిల్లీ",
+          "mandals": [
+            {"id": "connaught_place", "name_en": "Connaught Place", "name_hi": "कनॉट प्लेस", "name_te": "కనాట్ ప్లేస్"},
+            {"id": "chanakyapuri", "name_en": "Chanakyapuri", "name_hi": "चाणक्यपुरी", "name_te": "చాణక్యపురి"},
+            {"id": "vasant_vihar", "name_en": "Vasant Vihar", "name_hi": "वसंत विहार", "name_te": "వసంత్ విహార్"}
+          ]
+        },
+        {
+          "id": "north_delhi",
+          "name_en": "North Delhi",
+          "name_hi": "उत्तरी दिल्ली",
+          "name_te": "ఉత్తర ఢిల్లీ",
+          "mandals": [
+            {"id": "narela", "name_en": "Narela", "name_hi": "नरेला", "name_te": "నరేలా"},
+            {"id": "alipur", "name_en": "Alipur", "name_hi": "अलीपुर", "name_te": "అలీపూర్"},
+            {"id": "model_town", "name_en": "Model Town", "name_hi": "मॉडल टाउन", "name_te": "మోడల్ టౌన్"}
+          ]
+        },
+        {
+          "id": "south_delhi",
+          "name_en": "South Delhi",
+          "name_hi": "दक्षिणी दिल्ली",
+          "name_te": "దక్షిణ ఢిల్లీ",
+          "mandals": [
+            {"id": "saket", "name_en": "Saket", "name_hi": "साकेत", "name_te": "సాకేత్"},
+            {"id": "hauz_khas", "name_en": "Hauz Khas", "name_hi": "हौज़ खास", "name_te": "హౌజ్ ఖాస్"},
+            {"id": "mehrauli", "name_en": "Mehrauli", "name_hi": "महरौली", "name_te": "మెహ్రౌలి"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "goa",
+      "name_en": "Goa",
+      "name_hi": "गोवा",
+      "name_te": "గోవా",
+      "type": "state",
+      "districts": [
+        {
+          "id": "north_goa",
+          "name_en": "North Goa",
+          "name_hi": "उत्तर गोवा",
+          "name_te": "ఉత్తర గోవా",
+          "mandals": [
+            {"id": "panaji", "name_en": "Panaji", "name_hi": "पणजी", "name_te": "పనాజీ"},
+            {"id": "bardez", "name_en": "Bardez", "name_hi": "बारदेज़", "name_te": "బర్దేజ్"},
+            {"id": "bicholim", "name_en": "Bicholim", "name_hi": "डिचोली", "name_te": "బిచోలిమ్"}
+          ]
+        },
+        {
+          "id": "south_goa",
+          "name_en": "South Goa",
+          "name_hi": "दक्षिण गोवा",
+          "name_te": "దక్షిణ గోవా",
+          "mandals": [
+            {"id": "margao", "name_en": "Margao", "name_hi": "मडगांव", "name_te": "మార్గోవ్"},
+            {"id": "mormugao", "name_en": "Mormugao", "name_hi": "मॉर्मुगाओ", "name_te": "మోర్ముగావ్"},
+            {"id": "quepem", "name_en": "Quepem", "name_hi": "केपेम", "name_te": "క్వెపెం"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gujarat",
+      "name_en": "Gujarat",
+      "name_hi": "गुजरात",
+      "name_te": "గుజరాత్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "ahmedabad",
+          "name_en": "Ahmedabad",
+          "name_hi": "अहमदाबाद",
+          "name_te": "అహ్మదాబాద్",
+          "mandals": [
+            {"id": "ahmedabad_city", "name_en": "Ahmedabad City", "name_hi": "अहमदाबाद शहर", "name_te": "అహ్మదాబాద్ సిటీ"},
+            {"id": "sanand", "name_en": "Sanand", "name_hi": "साणंद", "name_te": "సానంద్"},
+            {"id": "dholka", "name_en": "Dholka", "name_hi": "धोलका", "name_te": "ధోల్కా"},
+            {"id": "viramgam", "name_en": "Viramgam", "name_hi": "विरामगाम", "name_te": "విరమ్‌గామ్"}
+          ]
+        },
+        {
+          "id": "surat",
+          "name_en": "Surat",
+          "name_hi": "सूरत",
+          "name_te": "సూరత్",
+          "mandals": [
+            {"id": "surat_city", "name_en": "Surat City", "name_hi": "सूरत शहर", "name_te": "సూరత్ సిటీ"},
+            {"id": "bardoli", "name_en": "Bardoli", "name_hi": "बारडोली", "name_te": "బార్డోలి"},
+            {"id": "olpad", "name_en": "Olpad", "name_hi": "ओल्पड", "name_te": "ఓల్పడ్"}
+          ]
+        },
+        {
+          "id": "rajkot",
+          "name_en": "Rajkot",
+          "name_hi": "राजकोट",
+          "name_te": "రాజ్‌కోట్",
+          "mandals": [
+            {"id": "rajkot_taluka", "name_en": "Rajkot Taluka", "name_hi": "राजकोट तालुका", "name_te": "రాజ్‌కోట్ తాలూకా"},
+            {"id": "gondal", "name_en": "Gondal", "name_hi": "गोंडल", "name_te": "గోండల్"},
+            {"id": "jetpur", "name_en": "Jetpur", "name_hi": "जेतपुर", "name_te": "జెట్‌పూర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "haryana",
+      "name_en": "Haryana",
+      "name_hi": "हरियाणा",
+      "name_te": "హర్యానా",
+      "type": "state",
+      "districts": [
+        {
+          "id": "karnal",
+          "name_en": "Karnal",
+          "name_hi": "करनाल",
+          "name_te": "కర్నాల్",
+          "mandals": [
+            {"id": "karnal", "name_en": "Karnal", "name_hi": "करनाल", "name_te": "కర్నాల్"},
+            {"id": "assandh", "name_en": "Assandh", "name_hi": "असंध", "name_te": "అసంధ్"},
+            {"id": "gharaunda", "name_en": "Gharaunda", "name_hi": "घरौंडा", "name_te": "ఘరౌండా"},
+            {"id": "nilokheri", "name_en": "Nilokheri", "name_hi": "नीलोखेड़ी", "name_te": "నీలోఖేరి"},
+            {"id": "indri", "name_en": "Indri", "name_hi": "इन्द्री", "name_te": "ఇంద్రి"}
+          ]
+        },
+        {
+          "id": "ambala",
+          "name_en": "Ambala",
+          "name_hi": "अंबाला",
+          "name_te": "అంబాలా",
+          "mandals": [
+            {"id": "ambala", "name_en": "Ambala", "name_hi": "अंबाला", "name_te": "అంబాలా"},
+            {"id": "barara", "name_en": "Barara", "name_hi": "बरारा", "name_te": "బరారా"},
+            {"id": "naraingarh", "name_en": "Naraingarh", "name_hi": "नारायणगढ़", "name_te": "నారాయణ్‌గఢ్"}
+          ]
+        },
+        {
+          "id": "kurukshetra",
+          "name_en": "Kurukshetra",
+          "name_hi": "कुरुक्षेत्र",
+          "name_te": "కురుక్షేత్ర",
+          "mandals": [
+            {"id": "thanesar", "name_en": "Thanesar", "name_hi": "थानेसर", "name_te": "థానేసర్"},
+            {"id": "pehowa", "name_en": "Pehowa", "name_hi": "पिहोवा", "name_te": "పెహోవా"},
+            {"id": "shahabad", "name_en": "Shahabad", "name_hi": "शाहबाद", "name_te": "షాహాబాద్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "himachal_pradesh",
+      "name_en": "Himachal Pradesh",
+      "name_hi": "हिमाचल प्रदेश",
+      "name_te": "హిమాచల్ ప్రదేశ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "shimla",
+          "name_en": "Shimla",
+          "name_hi": "शिमला",
+          "name_te": "సిమ్లా",
+          "mandals": [
+            {"id": "shimla_urban", "name_en": "Shimla Urban", "name_hi": "शिमला शहरी", "name_te": "సిమ్లా అర్బన్"},
+            {"id": "theog", "name_en": "Theog", "name_hi": "थियोग", "name_te": "థియోగ్"},
+            {"id": "rampur", "name_en": "Rampur", "name_hi": "रामपुर", "name_te": "రాంపూర్"}
+          ]
+        },
+        {
+          "id": "kangra",
+          "name_en": "Kangra",
+          "name_hi": "कांगड़ा",
+          "name_te": "కాంగ్రా",
+          "mandals": [
+            {"id": "dharamshala", "name_en": "Dharamshala", "name_hi": "धर्मशाला", "name_te": "ధర్మశాల"},
+            {"id": "palampur", "name_en": "Palampur", "name_hi": "पालमपुर", "name_te": "పాలంపూర్"},
+            {"id": "nurpur", "name_en": "Nurpur", "name_hi": "नूरपुर", "name_te": "నూర్పూర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jammu_and_kashmir",
+      "name_en": "Jammu and Kashmir",
+      "name_hi": "जम्मू और कश्मीर",
+      "name_te": "జమ్మూ మరియు కాశ్మీర్",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "srinagar",
+          "name_en": "Srinagar",
+          "name_hi": "श्रीनगर",
+          "name_te": "శ్రీనగర్",
+          "mandals": [
+            {"id": "srinagar_south", "name_en": "Srinagar South", "name_hi": "श्रीनगर दक्षिण", "name_te": "శ్రీనగర్ సౌత్"},
+            {"id": "srinagar_north", "name_en": "Srinagar North", "name_hi": "श्रीनगर उत्तर", "name_te": "శ్రీనగర్ నార్త్"}
+          ]
+        },
+        {
+          "id": "jammu",
+          "name_en": "Jammu",
+          "name_hi": "जम्मू",
+          "name_te": "జమ్మూ",
+          "mandals": [
+            {"id": "jammu_khas", "name_en": "Jammu Khas", "name_hi": "जम्मू खास", "name_te": "జమ్మూ ఖాస్"},
+            {"id": "akhnoor", "name_en": "Akhnoor", "name_hi": "अखनूर", "name_te": "అఖ్నూర్"},
+            {"id": "r_s_pura", "name_en": "R.S. Pura", "name_hi": "आर.एस. पुरा", "name_te": "ఆర్.ఎస్. పురా"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jharkhand",
+      "name_en": "Jharkhand",
+      "name_hi": "झारखंड",
+      "name_te": "జార్ఖండ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "ranchi",
+          "name_en": "Ranchi",
+          "name_hi": "राँची",
+          "name_te": "రాంచీ",
+          "mandals": [
+            {"id": "ranchi_sadar", "name_en": "Ranchi Sadar", "name_hi": "राँची सदर", "name_te": "రాంచీ సదర్"},
+            {"id": "kanke", "name_en": "Kanke", "name_hi": "कांके", "name_te": "కాంకే"},
+            {"id": "namkum", "name_en": "Namkum", "name_hi": "नामकुम", "name_te": "నమ్‌కుమ్"}
+          ]
+        },
+        {
+          "id": "east_singhbhum",
+          "name_en": "East Singhbhum",
+          "name_hi": "पूर्वी सिंहभूम",
+          "name_te": "తూర్పు సింగ్‌భూమ్",
+          "mandals": [
+            {"id": "jamshedpur", "name_en": "Jamshedpur", "name_hi": "जमशेदपुर", "name_te": "జంషెడ్‌పూర్"},
+            {"id": "ghatsila", "name_en": "Ghatsila", "name_hi": "घाटशिला", "name_te": "ఘట్సిల"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "karnataka",
+      "name_en": "Karnataka",
+      "name_hi": "कर्नाटक",
+      "name_te": "కర్ణాటక",
+      "type": "state",
+      "districts": [
+        {
+          "id": "bengaluru_urban",
+          "name_en": "Bengaluru Urban",
+          "name_hi": "बेंगलुरु शहरी",
+          "name_te": "బెంగళూరు అర్బన్",
+          "mandals": [
+            {"id": "bengaluru_north", "name_en": "Bengaluru North", "name_hi": "बेंगलुरु उत्तर", "name_te": "బెంగళూరు నార్త్"},
+            {"id": "bengaluru_south", "name_en": "Bengaluru South", "name_hi": "बेंगलुरु दक्षिण", "name_te": "బెంగళూరు సౌత్"},
+            {"id": "bengaluru_east", "name_en": "Bengaluru East", "name_hi": "बेंगलुरु पूर्व", "name_te": "బెంగళూరు ఈస్ట్"},
+            {"id": "anekal", "name_en": "Anekal", "name_hi": "अनेकल", "name_te": "అనేకల్"}
+          ]
+        },
+        {
+          "id": "mysuru",
+          "name_en": "Mysuru",
+          "name_hi": "मैसूरु",
+          "name_te": "మైసూరు",
+          "mandals": [
+            {"id": "mysuru_taluk", "name_en": "Mysuru Taluk", "name_hi": "मैसूरु तालुक", "name_te": "మైసూరు తాలూకా"},
+            {"id": "nanjangud", "name_en": "Nanjangud", "name_hi": "नंजनगूडु", "name_te": "నంజనగూడు"},
+            {"id": "hunsur", "name_en": "Hunsur", "name_hi": "हुणसूर", "name_te": "హున్సూర్"}
+          ]
+        },
+        {
+          "id": "belagavi",
+          "name_en": "Belagavi",
+          "name_hi": "बेलगावी",
+          "name_te": "బెల్గాం",
+          "mandals": [
+            {"id": "belagavi_taluk", "name_en": "Belagavi Taluk", "name_hi": "बेलगावी तालुक", "name_te": "బెల్గాం తాలూకా"},
+            {"id": "gokak", "name_en": "Gokak", "name_hi": "गोकाक", "name_te": "గోకాక్"},
+            {"id": "chikodi", "name_en": "Chikodi", "name_hi": "चिकोडी", "name_te": "చిక్కోడి"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kerala",
+      "name_en": "Kerala",
+      "name_hi": "केरल",
+      "name_te": "కేరళ",
+      "type": "state",
+      "districts": [
+        {
+          "id": "thiruvananthapuram",
+          "name_en": "Thiruvananthapuram",
+          "name_hi": "तिरुवनंतपुरम",
+          "name_te": "తిరువనంతపురం",
+          "mandals": [
+            {"id": "thiruvananthapuram_taluk", "name_en": "Thiruvananthapuram", "name_hi": "तिरुवनंतपुरम तालुक", "name_te": "తిరువనంతపురం తాలూకా"},
+            {"id": "neyyattinkara", "name_en": "Neyyattinkara", "name_hi": "नेय्याट्टिनकरा", "name_te": "నెయ్యట్టిన్‌కర"},
+            {"id": "nedumangad", "name_en": "Nedumangad", "name_hi": "नेडुमंगाड", "name_te": "నెడుమంగడ్"}
+          ]
+        },
+        {
+          "id": "ernakulam",
+          "name_en": "Ernakulam",
+          "name_hi": "एर्नाकुलम",
+          "name_te": "ఎర్నాకులం",
+          "mandals": [
+            {"id": "kochi", "name_en": "Kochi", "name_hi": "कोच्चि", "name_te": "కొచ్చి"},
+            {"id": "kanayannur", "name_en": "Kanayannur", "name_hi": "कणयन्नूर", "name_te": "కనయన్నూర్"},
+            {"id": "aluva", "name_en": "Aluva", "name_hi": "अलुवा", "name_te": "అలువ"}
+          ]
+        },
+        {
+          "id": "palakkad",
+          "name_en": "Palakkad",
+          "name_hi": "पालक्काड़",
+          "name_te": "పాలక్కాడ్",
+          "mandals": [
+            {"id": "palakkad_taluk", "name_en": "Palakkad Taluk", "name_hi": "पालक्काड़ तालुक", "name_te": "పాలక్కాడ్ తాలూకా"},
+            {"id": "chittur", "name_en": "Chittur", "name_hi": "चित्तूर", "name_te": "చిత్తూరు (కేరళ)"},
+            {"id": "ottappalam", "name_en": "Ottappalam", "name_hi": "ओट्टाप्पलम", "name_te": "ఒట్టప్పాలం"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ladakh",
+      "name_en": "Ladakh",
+      "name_hi": "लद्दाख",
+      "name_te": "లడఖ్",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "leh",
+          "name_en": "Leh",
+          "name_hi": "लेह",
+          "name_te": "లేహ్",
+          "mandals": [
+            {"id": "leh_hqr", "name_en": "Leh Hqr", "name_hi": "लेह मुख्यालय", "name_te": "లేహ్ హెడ్‌క్వార్టర్స్"},
+            {"id": "nubra", "name_en": "Nubra", "name_hi": "नुब्रा", "name_te": "నుబ్రా"},
+            {"id": "khaltse", "name_en": "Khaltse", "name_hi": "खलत्से", "name_te": "ఖాల్ట్సే"}
+          ]
+        },
+        {
+          "id": "kargil",
+          "name_en": "Kargil",
+          "name_hi": "कारगिल",
+          "name_te": "కార్గిల్",
+          "mandals": [
+            {"id": "kargil_hqr", "name_en": "Kargil Hqr", "name_hi": "कारगिल मुख्यालय", "name_te": "కార్గిల్ హెడ్‌క్వార్టర్స్"},
+            {"id": "zanskar", "name_en": "Zanskar", "name_hi": "ज़ांस्कर", "name_te": "జాన్స్కర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lakshadweep",
+      "name_en": "Lakshadweep",
+      "name_hi": "लक्षद्वीप",
+      "name_te": "లక్షద్వీప్",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "lakshadweep",
+          "name_en": "Lakshadweep",
+          "name_hi": "लक्षद्वीप",
+          "name_te": "లక్షద్వీప్",
+          "mandals": [
+            {"id": "kavaratti", "name_en": "Kavaratti", "name_hi": "कवरत्ती", "name_te": "కవరత్తి"},
+            {"id": "agatti", "name_en": "Agatti", "name_hi": "अगत्ती", "name_te": "అగత్తి"},
+            {"id": "amindivi", "name_en": "Amini", "name_hi": "अमीनी", "name_te": "అమిని"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "madhya_pradesh",
+      "name_en": "Madhya Pradesh",
+      "name_hi": "मध्य प्रदेश",
+      "name_te": "మధ్యప్రదేశ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "bhopal",
+          "name_en": "Bhopal",
+          "name_hi": "भोपाल",
+          "name_te": "భోపాల్",
+          "mandals": [
+            {"id": "bhopal_huzur", "name_en": "Huzur", "name_hi": "हुजूर", "name_te": "హుజూర్"},
+            {"id": "berasia", "name_en": "Berasia", "name_hi": "बेरसिया", "name_te": "బేరసియా"},
+            {"id": "kolar", "name_en": "Kolar", "name_hi": "कोलार", "name_te": "కోలార్"}
+          ]
+        },
+        {
+          "id": "indore",
+          "name_en": "Indore",
+          "name_hi": "इंदौर",
+          "name_te": "ఇండోర్",
+          "mandals": [
+            {"id": "indore_hqr", "name_en": "Indore City", "name_hi": "इंदौर शहर", "name_te": "ఇండోర్ సిటీ"},
+            {"id": "mhow", "name_en": "Mhow", "name_hi": "महू", "name_te": "మ్హోవ్"},
+            {"id": "sanwer", "name_en": "Sanwer", "name_hi": "सांवेर", "name_te": "సాన్వేర్"}
+          ]
+        },
+        {
+          "id": "jabalpur",
+          "name_en": "Jabalpur",
+          "name_hi": "जबलपुर",
+          "name_te": "జబల్‌పూర్",
+          "mandals": [
+            {"id": "jabalpur_sadar", "name_en": "Jabalpur Sadar", "name_hi": "जबलपुर सदर", "name_te": "జబల్‌పూర్ సదర్"},
+            {"id": "panagar", "name_en": "Panagar", "name_hi": "पनागर", "name_te": "పనాగర్"},
+            {"id": "sihora", "name_en": "Sihora", "name_hi": "सिहोरा", "name_te": "సిహోరా"}
+          ]
+        },
+        {
+          "id": "ujjain",
+          "name_en": "Ujjain",
+          "name_hi": "उज्जैन",
+          "name_te": "ఉజ్జయిని",
+          "mandals": [
+            {"id": "ujjain_city", "name_en": "Ujjain City", "name_hi": "उज्जैन नगर", "name_te": "ఉజ్జయిని నగర్"},
+            {"id": "badnagar", "name_en": "Badnagar", "name_hi": "बड़नगर", "name_te": "బద్నగర్"},
+            {"id": "tarana", "name_en": "Tarana", "name_hi": "तराना", "name_te": "తరానా"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "maharashtra",
+      "name_en": "Maharashtra",
+      "name_hi": "महाराष्ट्र",
+      "name_te": "మహారాష్ట్ర",
+      "type": "state",
+      "districts": [
+        {
+          "id": "pune",
+          "name_en": "Pune",
+          "name_hi": "पुणे",
+          "name_te": "పూణే",
+          "mandals": [
+            {"id": "pune_city", "name_en": "Pune City", "name_hi": "पुणे शहर", "name_te": "పూణే సిటీ"},
+            {"id": "haveli", "name_en": "Haveli", "name_hi": "हवेली", "name_te": "హవేలి"},
+            {"id": "baramati", "name_en": "Baramati", "name_hi": "बारामती", "name_te": "బారామతి"},
+            {"id": "shirur", "name_en": "Shirur", "name_hi": "शिरूर", "name_te": "శిరూర్"}
+          ]
+        },
+        {
+          "id": "nagpur",
+          "name_en": "Nagpur",
+          "name_hi": "नागपुर",
+          "name_te": "నాగ్‌పూర్",
+          "mandals": [
+            {"id": "nagpur_urban", "name_en": "Nagpur Urban", "name_hi": "नागपुर शहरी", "name_te": "నాగ్‌పూర్ అర్బన్"},
+            {"id": "katol", "name_en": "Katol", "name_hi": "काटोल", "name_te": "కాటోల్"},
+            {"id": "saoner", "name_en": "Saoner", "name_hi": "सावनेर", "name_te": "సావ్నేర్"}
+          ]
+        },
+        {
+          "id": "nashik",
+          "name_en": "Nashik",
+          "name_hi": "नाशिक",
+          "name_te": "నాసిక్",
+          "mandals": [
+            {"id": "nashik_city", "name_en": "Nashik City", "name_hi": "नाशिक शहर", "name_te": "నాసిక్ సిటీ"},
+            {"id": "niphad", "name_en": "Niphad", "name_hi": "निफाड", "name_te": "నిఫాడ్"},
+            {"id": "malegaon", "name_en": "Malegaon", "name_hi": "मालेगांव", "name_te": "మాలేగావ్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manipur",
+      "name_en": "Manipur",
+      "name_hi": "मणिपुर",
+      "name_te": "మణిపూర్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "imphal_west",
+          "name_en": "Imphal West",
+          "name_hi": "इम्फाल पश्चिम",
+          "name_te": "ఇంఫాల్ వెస్ట్",
+          "mandals": [
+            {"id": "lamphelpat", "name_en": "Lamphelpat", "name_hi": "लाम्फेलपत", "name_te": "లాంఫెల్పాట్"},
+            {"id": "patsoi", "name_en": "Patsoi", "name_hi": "पत्सोई", "name_te": "పాట్సోయ్"}
+          ]
+        },
+        {
+          "id": "imphal_east",
+          "name_en": "Imphal East",
+          "name_hi": "इम्फाल पूर्व",
+          "name_te": "ఇంఫాల్ ఈస్ట్",
+          "mandals": [
+            {"id": "porompat", "name_en": "Porompat", "name_hi": "पोरोमपत", "name_te": "పోరోంపాట్"},
+            {"id": "sawombung", "name_en": "Sawombung", "name_hi": "सावोमबुंग", "name_te": "సావోంబుంగ్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "meghalaya",
+      "name_en": "Meghalaya",
+      "name_hi": "मेघालय",
+      "name_te": "మేఘాలయ",
+      "type": "state",
+      "districts": [
+        {
+          "id": "east_khasi_hills",
+          "name_en": "East Khasi Hills",
+          "name_hi": "पूर्वी खासी हिल्स",
+          "name_te": "తూర్పు ఖాసీ హిల్స్",
+          "mandals": [
+            {"id": "shillong", "name_en": "Shillong", "name_hi": "शिलांग", "name_te": "షిల్లాంగ్"},
+            {"id": "sohra", "name_en": "Sohra (Cherrapunji)", "name_hi": "सोहरा (चेरापूंजी)", "name_te": "సోహ్రా (చిరపుంజి)"}
+          ]
+        },
+        {
+          "id": "west_garo_hills",
+          "name_en": "West Garo Hills",
+          "name_hi": "पश्चिम गारो हिल्स",
+          "name_te": "పశ్చిమ గారో హిల్స్",
+          "mandals": [
+            {"id": "tura", "name_en": "Tura", "name_hi": "तुरा", "name_te": "తురా"},
+            {"id": "dadenggre", "name_en": "Dadenggre", "name_hi": "दादेंगग्रे", "name_te": "దాదెంగ్రే"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mizoram",
+      "name_en": "Mizoram",
+      "name_hi": "मिज़ोरम",
+      "name_te": "మిజోరం",
+      "type": "state",
+      "districts": [
+        {
+          "id": "aizawl",
+          "name_en": "Aizawl",
+          "name_hi": "आइज़ोल",
+          "name_te": "ఐజ్వాల్",
+          "mandals": [
+            {"id": "aizawl_east", "name_en": "Aizawl East", "name_hi": "आइज़ोल पूर्व", "name_te": "ఐజ్వాల్ ఈస్ట్"},
+            {"id": "aizawl_west", "name_en": "Aizawl West", "name_hi": "आइज़ोल पश्चिम", "name_te": "ఐజ్వాల్ వెస్ట్"}
+          ]
+        },
+        {
+          "id": "lunglei",
+          "name_en": "Lunglei",
+          "name_hi": "लुंगलेई",
+          "name_te": "లుంగ్లీ",
+          "mandals": [
+            {"id": "lunglei_hqr", "name_en": "Lunglei Hqr", "name_hi": "लुंगलेई मुख्यालय", "name_te": "లుంగ్లీ హెడ్‌క్వార్టర్స్"},
+            {"id": "hnahthial", "name_en": "Hnahthial", "name_hi": "हनाथियाल", "name_te": "హ్నాహ్తియాల్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nagaland",
+      "name_en": "Nagaland",
+      "name_hi": "नागालैंड",
+      "name_te": "నాగాలాండ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "kohima",
+          "name_en": "Kohima",
+          "name_hi": "कोहिमा",
+          "name_te": "కోహిమా",
+          "mandals": [
+            {"id": "kohima_sadar", "name_en": "Kohima Sadar", "name_hi": "कोहिमा सदर", "name_te": "కోహిమా సదర్"},
+            {"id": "sechu_zubza", "name_en": "Sechu Zubza", "name_hi": "सेचू जुब्जा", "name_te": "సెచు జుబ్జా"}
+          ]
+        },
+        {
+          "id": "dimapur",
+          "name_en": "Dimapur",
+          "name_hi": "दीमापुर",
+          "name_te": "దిమాపూర్",
+          "mandals": [
+            {"id": "dimapur_sadar", "name_en": "Dimapur Sadar", "name_hi": "दीमापुर सदर", "name_te": "దిమాపూర్ సదర్"},
+            {"id": "chumukedima", "name_en": "Chumukedima", "name_hi": "चुमुकेदिमा", "name_te": "చుముకేదిమా"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "odisha",
+      "name_en": "Odisha",
+      "name_hi": "ओडिशा",
+      "name_te": "ఒడిశా",
+      "type": "state",
+      "districts": [
+        {
+          "id": "khordha",
+          "name_en": "Khordha",
+          "name_hi": "खोर्धा",
+          "name_te": "ఖుర్దా",
+          "mandals": [
+            {"id": "bhubaneswar", "name_en": "Bhubaneswar", "name_hi": "भुवनेश्वर", "name_te": "భువనేశ్వర్"},
+            {"id": "jatni", "name_en": "Jatni", "name_hi": "जतनी", "name_te": "జట్నీ"},
+            {"id": "khordha_sadar", "name_en": "Khordha Sadar", "name_hi": "खोर्धा सदर", "name_te": "ఖుర్దా సదర్"}
+          ]
+        },
+        {
+          "id": "cuttack",
+          "name_en": "Cuttack",
+          "name_hi": "कटक",
+          "name_te": "కటక్",
+          "mandals": [
+            {"id": "cuttack_sadar", "name_en": "Cuttack Sadar", "name_hi": "कटक सदर", "name_te": "కటక్ సదర్"},
+            {"id": "choudwar", "name_en": "Choudwar", "name_hi": "चौद्वार", "name_te": "చౌద్వార్"},
+            {"id": "banki", "name_en": "Banki", "name_hi": "बांकी", "name_te": "బాంకి"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "puducherry",
+      "name_en": "Puducherry",
+      "name_hi": "पुदुचेरी",
+      "name_te": "పుదుచ్చేరి",
+      "type": "ut",
+      "districts": [
+        {
+          "id": "puducherry",
+          "name_en": "Puducherry",
+          "name_hi": "पुदुचेरी",
+          "name_te": "పుదుచ్చేరి",
+          "mandals": [
+            {"id": "puducherry_municipality", "name_en": "Puducherry Municipality", "name_hi": "पुदुचेरी नगरपालिका", "name_te": "పుదుచ్చేరి మున్సిపాలిటీ"},
+            {"id": "ozhukarai", "name_en": "Ozhukarai", "name_hi": "ओझुकरई", "name_te": "ఒళుకరై"},
+            {"id": "villianur", "name_en": "Villianur", "name_hi": "विल्लियनूर", "name_te": "విల్లియనూర్"}
+          ]
+        },
+        {
+          "id": "karaikal",
+          "name_en": "Karaikal",
+          "name_hi": "कराईकल",
+          "name_te": "కారైకల్",
+          "mandals": [
+            {"id": "karaikal_municipality", "name_en": "Karaikal Municipality", "name_hi": "कराईकल नगरपालिका", "name_te": "కారైకల్ మున్సిపాలిటీ"},
+            {"id": "thirunallar", "name_en": "Thirunallar", "name_hi": "तिरुनाल्लार", "name_te": "తిరునల్లార్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "punjab",
+      "name_en": "Punjab",
+      "name_hi": "पंजाब",
+      "name_te": "పంజాబ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "ludhiana",
+          "name_en": "Ludhiana",
+          "name_hi": "लुधियाना",
+          "name_te": "లుధియానా",
+          "mandals": [
+            {"id": "khanna", "name_en": "Khanna", "name_hi": "खन्ना", "name_te": "ఖన్నా"},
+            {"id": "samrala", "name_en": "Samrala", "name_hi": "समराला", "name_te": "సమ్రాల"},
+            {"id": "payal", "name_en": "Payal", "name_hi": "पायल", "name_te": "పాయల్"},
+            {"id": "ludhiana_east", "name_en": "Ludhiana East", "name_hi": "लुधियाना पूर्व", "name_te": "లుధియానా ఈస్ట్"},
+            {"id": "ludhiana_west", "name_en": "Ludhiana West", "name_hi": "लुधियाना पश्चिम", "name_te": "లుధియానా వెస్ట్"},
+            {"id": "jagraon", "name_en": "Jagraon", "name_hi": "जगरांव", "name_te": "జగ్రావ్"}
+          ]
+        },
+        {
+          "id": "patiala",
+          "name_en": "Patiala",
+          "name_hi": "पटियाला",
+          "name_te": "పాటియాలా",
+          "mandals": [
+            {"id": "patiala", "name_en": "Patiala", "name_hi": "पटियाला", "name_te": "పాటియాలా"},
+            {"id": "nabha", "name_en": "Nabha", "name_hi": "नाभा", "name_te": "నాభా"},
+            {"id": "rajpura", "name_en": "Rajpura", "name_hi": "राजपुरा", "name_te": "రాజ్‌పురా"},
+            {"id": "samana", "name_en": "Samana", "name_hi": "समाना", "name_te": "సమానా"}
+          ]
+        },
+        {
+          "id": "jalandhar",
+          "name_en": "Jalandhar",
+          "name_hi": "जालंधर",
+          "name_te": "జలంధర్",
+          "mandals": [
+            {"id": "jalandhar_1", "name_en": "Jalandhar I", "name_hi": "जालंधर I", "name_te": "జలంధర్ I"},
+            {"id": "jalandhar_2", "name_en": "Jalandhar II", "name_hi": "जालंधर II", "name_te": "జలంధర్ II"},
+            {"id": "phillaur", "name_en": "Phillaur", "name_hi": "फिल्लौर", "name_te": "ఫిల్లావుర్"},
+            {"id": "nakodar", "name_en": "Nakodar", "name_hi": "नकोदर", "name_te": "నకోదర్"}
+          ]
+        },
+        {
+          "id": "amritsar",
+          "name_en": "Amritsar",
+          "name_hi": "अमृतसर",
+          "name_te": "అమృత్‌సర్",
+          "mandals": [
+            {"id": "amritsar_1", "name_en": "Amritsar I", "name_hi": "अमृतसर I", "name_te": "అమృత్‌సర్ I"},
+            {"id": "amritsar_2", "name_en": "Amritsar II", "name_hi": "अमृतसर II", "name_te": "అమృత్‌సర్ II"},
+            {"id": "ajnala", "name_en": "Ajnala", "name_hi": "अजनाला", "name_te": "అజ్నాలా"},
+            {"id": "baba_bakala", "name_en": "Baba Bakala", "name_hi": "बाबा बकाला", "name_te": "బాబా బకాలా"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rajasthan",
+      "name_en": "Rajasthan",
+      "name_hi": "राजस्थान",
+      "name_te": "రాజస్థాన్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "jaipur",
+          "name_en": "Jaipur",
+          "name_hi": "जयपुर",
+          "name_te": "జైపూర్",
+          "mandals": [
+            {"id": "jaipur_city", "name_en": "Jaipur City", "name_hi": "जयपुर शहर", "name_te": "జైపూర్ సిటీ"},
+            {"id": "sanganer", "name_en": "Sanganer", "name_hi": "सांगानेर", "name_te": "సంగనేర్"},
+            {"id": "amber", "name_en": "Amber", "name_hi": "आमेर", "name_te": "అంబర్"},
+            {"id": "chomu", "name_en": "Chomu", "name_hi": "चौमूं", "name_te": "చోము"}
+          ]
+        },
+        {
+          "id": "jodhpur",
+          "name_en": "Jodhpur",
+          "name_hi": "जोधपुर",
+          "name_te": "జోధ్‌పూర్",
+          "mandals": [
+            {"id": "jodhpur_city", "name_en": "Jodhpur City", "name_hi": "जोधपुर नगर", "name_te": "జోధ్‌పూర్ సిటీ"},
+            {"id": "bilara", "name_en": "Bilara", "name_hi": "बिलाड़ा", "name_te": "బిలారా"},
+            {"id": "osian", "name_en": "Osian", "name_hi": "ओसियां", "name_te": "ఒసియాన్"}
+          ]
+        },
+        {
+          "id": "kota",
+          "name_en": "Kota",
+          "name_hi": "कोटा",
+          "name_te": "కోట",
+          "mandals": [
+            {"id": "kota_city", "name_en": "Kota City", "name_hi": "कोटा नगर", "name_te": "కోట సిటీ"},
+            {"id": "sangod", "name_en": "Sangod", "name_hi": "सांगोद", "name_te": "సంగోద్"},
+            {"id": "ramganj_mandi", "name_en": "Ramganj Mandi", "name_hi": "रामगंज मंडी", "name_te": "రామ్‌గంజ్ మండి"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sikkim",
+      "name_en": "Sikkim",
+      "name_hi": "सिक्किम",
+      "name_te": "సిక్కిం",
+      "type": "state",
+      "districts": [
+        {
+          "id": "east_sikkim",
+          "name_en": "Gangtok (East Sikkim)",
+          "name_hi": "गंगटोक (पूर्वी सिक्किम)",
+          "name_te": "గాంగ్టక్ (తూర్పు సిక్కిం)",
+          "mandals": [
+            {"id": "gangtok_subdiv", "name_en": "Gangtok", "name_hi": "गंगटोक", "name_te": "గాంగ్టక్"},
+            {"id": "pakyong", "name_en": "Pakyong", "name_hi": "पाक्योङ", "name_te": "పాక్యోంగ్"}
+          ]
+        },
+        {
+          "id": "south_sikkim",
+          "name_en": "Namchi (South Sikkim)",
+          "name_hi": "नामची (दक्षिणी सिक्किम)",
+          "name_te": "నామ్చి (దక్షిణ సిక్కిం)",
+          "mandals": [
+            {"id": "namchi_subdiv", "name_en": "Namchi", "name_hi": "नामची", "name_te": "నామ్చి"},
+            {"id": "ravangla", "name_en": "Ravangla", "name_hi": "रावांग्ला", "name_te": "రావంగ్లా"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tamil_nadu",
+      "name_en": "Tamil Nadu",
+      "name_hi": "तमिलनाडु",
+      "name_te": "తమిళనాడు",
+      "type": "state",
+      "districts": [
+        {
+          "id": "chennai",
+          "name_en": "Chennai",
+          "name_hi": "चेन्नई",
+          "name_te": "చెన్నై",
+          "mandals": [
+            {"id": "egmore", "name_en": "Egmore", "name_hi": "एग्मोर", "name_te": "ఎగ్మోర్"},
+            {"id": "guindy", "name_en": "Guindy", "name_hi": "गिंडी", "name_te": "గిండి"},
+            {"id": "mylapore", "name_en": "Mylapore", "name_hi": "मयिलापुर", "name_te": "మైలాపూర్"},
+            {"id": "tondiarpet", "name_en": "Tondiarpet", "name_hi": "तोंडियारपेट", "name_te": "తొండియార్‌పేట్"}
+          ]
+        },
+        {
+          "id": "coimbatore",
+          "name_en": "Coimbatore",
+          "name_hi": "कोयंबटूर",
+          "name_te": "కోయంబత్తూరు",
+          "mandals": [
+            {"id": "coimbatore_north", "name_en": "Coimbatore North", "name_hi": "कोयंबटूर उत्तर", "name_te": "కోయంబత్తూరు నార్త్"},
+            {"id": "coimbatore_south", "name_en": "Coimbatore South", "name_hi": "कोयंबटूर दक्षिण", "name_te": "కోయంబత్తూరు సౌత్"},
+            {"id": "pollachi", "name_en": "Pollachi", "name_hi": "पोल्लाची", "name_te": "పొల్లాచి"}
+          ]
+        },
+        {
+          "id": "madurai",
+          "name_en": "Madurai",
+          "name_hi": "मदुरै",
+          "name_te": "మధురై",
+          "mandals": [
+            {"id": "madurai_north", "name_en": "Madurai North", "name_hi": "मदुरै उत्तर", "name_te": "మధురై నార్త్"},
+            {"id": "madurai_south", "name_en": "Madurai South", "name_hi": "मदुरै दक्षिण", "name_te": "మధురై సౌత్"},
+            {"id": "melur", "name_en": "Melur", "name_hi": "मेलूर", "name_te": "మేలూర్"}
+          ]
+        },
+        {
+          "id": "thanjavur",
+          "name_en": "Thanjavur",
+          "name_hi": "तंजావूर",
+          "name_te": "తంజావూరు",
+          "mandals": [
+            {"id": "thanjavur_taluk", "name_en": "Thanjavur Taluk", "name_hi": "तंजावूर तालुक", "name_te": "తంజావూరు తాలూకా"},
+            {"id": "kumbakonam", "name_en": "Kumbakonam", "name_hi": "कुंभकोणम", "name_te": "కుంభకోణం"},
+            {"id": "papanasam", "name_en": "Papanasam", "name_hi": "पापनासम", "name_te": "పాపనాశం"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "telangana",
+      "name_en": "Telangana",
+      "name_hi": "तेलंगाना",
+      "name_te": "తెలంగాణ",
+      "type": "state",
+      "districts": [
+        {
+          "id": "rangareddy",
+          "name_en": "Rangareddy",
+          "name_hi": "रंगारेड्डी",
+          "name_te": "రంగారెడ్డి",
+          "mandals": [
+            {"id": "rajendranagar", "name_en": "Rajendranagar", "name_hi": "राजेन्द्रनगर", "name_te": "రాజేంద్రనగర్"},
+            {"id": "shamshabad", "name_en": "Shamshabad", "name_hi": "शमशाबाद", "name_te": "శంషాబాద్"},
+            {"id": "ibrahimpatnam", "name_en": "Ibrahimpatnam", "name_hi": "इब्राहिमपटनम", "name_te": "ఇబ్రహీంపట్నం"},
+            {"id": "maheshwaram", "name_en": "Maheshwaram", "name_hi": "महेश्वरम", "name_te": "మహేశ్వరం"},
+            {"id": "chevella", "name_en": "Chevella", "name_hi": "चेवेल्ला", "name_te": "చేవెళ్ల"}
+          ]
+        },
+        {
+          "id": "hyderabad",
+          "name_en": "Hyderabad",
+          "name_hi": "हैदराबाद",
+          "name_te": "హైదరాబాద్",
+          "mandals": [
+            {"id": "charminar", "name_en": "Charminar", "name_hi": "चारमीनार", "name_te": "చార్మినార్"},
+            {"id": "secunderabad", "name_en": "Secunderabad", "name_hi": "सिकंदराबाद", "name_te": "సికింద్రాబాద్"},
+            {"id": "khairatabad", "name_en": "Khairatabad", "name_hi": "खैरताबाद", "name_te": "ఖైరతాబాద్"},
+            {"id": "ameerpet", "name_en": "Ameerpet", "name_hi": "अमीरपेट", "name_te": "అమీర్‌పేట్"}
+          ]
+        },
+        {
+          "id": "warangal",
+          "name_en": "Warangal",
+          "name_hi": "वारंगल",
+          "name_te": "వరంగల్",
+          "mandals": [
+            {"id": "warangal", "name_en": "Warangal", "name_hi": "वारंगल", "name_te": "వరంగల్"},
+            {"id": "narsampet", "name_en": "Narsampet", "name_hi": "नरसमपेट", "name_te": "నర్సంపేట"},
+            {"id": "wardhannapet", "name_en": "Wardhannapet", "name_hi": "वर्धन्नापेट", "name_te": "వర్ధన్నపేట"}
+          ]
+        },
+        {
+          "id": "nizamabad",
+          "name_en": "Nizamabad",
+          "name_hi": "निज़ामाबाद",
+          "name_te": "నిజామాబాద్",
+          "mandals": [
+            {"id": "nizamabad_north", "name_en": "Nizamabad North", "name_hi": "निज़ामाबाद उत्तर", "name_te": "నిజామాబాద్ నార్త్"},
+            {"id": "bodhan", "name_en": "Bodhan", "name_hi": "बोधन", "name_te": "బోధన్"},
+            {"id": "armur", "name_en": "Armur", "name_hi": "आर्मूर", "name_te": "ఆర్మూర్"}
+          ]
+        },
+        {
+          "id": "karimnagar",
+          "name_en": "Karimnagar",
+          "name_hi": "करीमनगर",
+          "name_te": "కరీంనగర్",
+          "mandals": [
+            {"id": "karimnagar_rural", "name_en": "Karimnagar Rural", "name_hi": "करीमनगर ग्रामीण", "name_te": "కరీంనగర్ రూరల్"},
+            {"id": "huzurabad", "name_en": "Huzurabad", "name_hi": "हुज़ूराबाद", "name_te": "హుజూరాబాద్"},
+            {"id": "choppadandi", "name_en": "Choppadandi", "name_hi": "चొప్పదండి", "name_te": "చొప్పదండి"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tripura",
+      "name_en": "Tripura",
+      "name_hi": "त्रिपुरा",
+      "name_te": "త్రిపుర",
+      "type": "state",
+      "districts": [
+        {
+          "id": "west_tripura",
+          "name_en": "West Tripura",
+          "name_hi": "पश्चिम त्रिपुरा",
+          "name_te": "పశ్చిమ త్రిపుర",
+          "mandals": [
+            {"id": "agartala", "name_en": "Agartala", "name_hi": "अगरतला", "name_te": "అగర్తలా"},
+            {"id": "mohanpur", "name_en": "Mohanpur", "name_hi": "मोहनपुर", "name_te": "మోహన్‌పూర్"},
+            {"id": "jirania", "name_en": "Jirania", "name_hi": "जिरानिया", "name_te": "జిరానియా"}
+          ]
+        },
+        {
+          "id": "gomati",
+          "name_en": "Gomati",
+          "name_hi": "गोमती",
+          "name_te": "గోమతి",
+          "mandals": [
+            {"id": "udaipur_tripura", "name_en": "Udaipur", "name_hi": "उदयपुर", "name_te": "ఉదయ్‌పూర్"},
+            {"id": "amarpur", "name_en": "Amarpur", "name_hi": "अमरपुर", "name_te": "అమర్‌పూర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uttar_pradesh",
+      "name_en": "Uttar Pradesh",
+      "name_hi": "उत्तर प्रदेश",
+      "name_te": "ఉత్తర ప్రదేశ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "lucknow",
+          "name_en": "Lucknow",
+          "name_hi": "लखनऊ",
+          "name_te": "లక్నో",
+          "mandals": [
+            {"id": "lucknow_sadar", "name_en": "Lucknow Sadar", "name_hi": "लखनऊ सदर", "name_te": "లక్నో సదర్"},
+            {"id": "mohanlalganj", "name_en": "Mohanlalganj", "name_hi": "मोहनलालगंज", "name_te": "మోహన్‌లాల్‌గంజ్"},
+            {"id": "malihabad", "name_en": "Malihabad", "name_hi": "मलीहाबाद", "name_te": "మలీహాబాద్"},
+            {"id": "bakshi_ka_talab", "name_en": "Bakshi Ka Talab", "name_hi": "बख्शी का तालाब", "name_te": "బక్షి కా తాలాబ్"}
+          ]
+        },
+        {
+          "id": "varanasi",
+          "name_en": "Varanasi",
+          "name_hi": "वाराणसी",
+          "name_te": "వారణాసి",
+          "mandals": [
+            {"id": "varanasi_sadar", "name_en": "Varanasi Sadar", "name_hi": "वाराणसी सदर", "name_te": "వారణాసి సదర్"},
+            {"id": "pindra", "name_en": "Pindra", "name_hi": "पिंडरा", "name_te": "పిండ్రా"}
+          ]
+        },
+        {
+          "id": "prayagraj",
+          "name_en": "Prayagraj",
+          "name_hi": "प्रयागराज",
+          "name_te": "ప్రయాగ్‌రాజ్",
+          "mandals": [
+            {"id": "sadar_prayagraj", "name_en": "Sadar", "name_hi": "सदर", "name_te": "సదర్"},
+            {"id": "phulpur", "name_en": "Phulpur", "name_hi": "फूलपुर", "name_te": "ఫూల్‌పూర్"},
+            {"id": "soron", "name_en": "Koraon", "name_hi": "कोरांव", "name_te": "కోరాన్"}
+          ]
+        },
+        {
+          "id": "kanpur_nagar",
+          "name_en": "Kanpur Nagar",
+          "name_hi": "कानपुर नगर",
+          "name_te": "కాన్పూర్ నగర్",
+          "mandals": [
+            {"id": "kanpur_sadar", "name_en": "Kanpur Sadar", "name_hi": "कानपुर सदर", "name_te": "కాన్పూర్ సదర్"},
+            {"id": "bilhaur", "name_en": "Bilhaur", "name_hi": "बिल्हौर", "name_te": "బిల్హౌర్"},
+            {"id": "ghatampur", "name_en": "Ghatampur", "name_hi": "घाटमपुर", "name_te": "ఘటంపూర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uttarakhand",
+      "name_en": "Uttarakhand",
+      "name_hi": "उत्तराखंड",
+      "name_te": "ఉత్తరాఖండ్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "dehradun",
+          "name_en": "Dehradun",
+          "name_hi": "देहरादून",
+          "name_te": "డెహ్రాడూన్",
+          "mandals": [
+            {"id": "dehradun_sadar", "name_en": "Dehradun Sadar", "name_hi": "देहरादून सदर", "name_te": "డెహ్రాడూన్ సదర్"},
+            {"id": "rishikesh", "name_en": "Rishikesh", "name_hi": "ऋषिकेश", "name_te": "రిషికేశ్"},
+            {"id": "vikasnagar", "name_en": "Vikasnagar", "name_hi": "विकासनगर", "name_te": "వికాస్‌నగర్"}
+          ]
+        },
+        {
+          "id": "haridwar",
+          "name_en": "Haridwar",
+          "name_hi": "हरिद्वार",
+          "name_te": "హరిద్వార్",
+          "mandals": [
+            {"id": "haridwar_sadar", "name_en": "Haridwar Sadar", "name_hi": "हरिद्वार सदर", "name_te": "హరిద్వార్ సదర్"},
+            {"id": "roorkee", "name_en": "Roorkee", "name_hi": "रुड़की", "name_te": "రూర్కీ"},
+            {"id": "laksar", "name_en": "Laksar", "name_hi": "लक्सर", "name_te": "లక్సర్"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "west_bengal",
+      "name_en": "West Bengal",
+      "name_hi": "पश्चिम बंगाल",
+      "name_te": "పశ్చిమ బెంగాల్",
+      "type": "state",
+      "districts": [
+        {
+          "id": "kolkata",
+          "name_en": "Kolkata",
+          "name_hi": "कोलकाता",
+          "name_te": "కోల్‌కతా",
+          "mandals": [
+            {"id": "kolkata_central", "name_en": "Kolkata Central", "name_hi": "कोलकाता मध्य", "name_te": "కోల్‌కతా సెంట్రల్"},
+            {"id": "alipore", "name_en": "Alipore", "name_hi": "अलीपुर", "name_te": "అలీపూర్"},
+            {"id": "jadavpur", "name_en": "Jadavpur", "name_hi": "जादवपुर", "name_te": "జాదవ్‌పూర్"}
+          ]
+        },
+        {
+          "id": "howrah",
+          "name_en": "Howrah",
+          "name_hi": "हावड़ा",
+          "name_te": "హౌరా",
+          "mandals": [
+            {"id": "howrah_sadar", "name_en": "Howrah Sadar", "name_hi": "हावड़ा सदर", "name_te": "హౌరా సదర్"},
+            {"id": "uluberia", "name_en": "Uluberia", "name_hi": "उलुबेरिया", "name_te": "ఉలుబెరియా"}
+          ]
+        },
+        {
+          "id": "bardhaman",
+          "name_en": "Purba Bardhaman",
+          "name_hi": "पूर्व बर्धमान",
+          "name_te": "తూర్పు బర్ధమాన్",
+          "mandals": [
+            {"id": "bardhaman_sadar_north", "name_en": "Bardhaman Sadar North", "name_hi": "बर्धमान सदर उत्तर", "name_te": "బర్ధమాన్ సదర్ నార్త్"},
+            {"id": "kalna", "name_en": "Kalna", "name_hi": "कालना", "name_te": "కాల్నా"},
+            {"id": "katwa", "name_en": "Katwa", "name_hi": "काटवा", "name_te": "కాట్వా"}
+          ]
+        }
+      ]
+    }
+  ]
+}

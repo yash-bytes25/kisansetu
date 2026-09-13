@@ -1,8 +1,12 @@
 /// Severity levels for officer exceptions.
 enum ExceptionSeverity {
-  info,
-  warning,
   critical,
+  high,
+  medium,
+  low,
+  // Backwards compatibility aliases
+  warning,
+  info,
 }
 
 /// Lifecycle statuses for operational exceptions.
@@ -23,6 +27,7 @@ enum ExceptionType {
   centreStopped,
   bookingAnomaly,
   capacityForecastRisk,
+  slotOverload,
 }
 
 /// Authoritative data model for operational exceptions on the Officer Command Centre.
@@ -65,10 +70,33 @@ class OfficerExceptionModel {
     switch (severity) {
       case ExceptionSeverity.critical:
         return 'CRITICAL';
+      case ExceptionSeverity.high:
+        return 'HIGH';
       case ExceptionSeverity.warning:
         return 'WARNING';
+      case ExceptionSeverity.medium:
+        return 'MEDIUM';
+      case ExceptionSeverity.low:
+        return 'LOW';
       case ExceptionSeverity.info:
         return 'INFO';
+    }
+  }
+
+  String get severityTag {
+    switch (severity) {
+      case ExceptionSeverity.critical:
+        return '⛔ CRITICAL';
+      case ExceptionSeverity.high:
+        return '🔴 HIGH';
+      case ExceptionSeverity.warning:
+        return '⚠️ WARNING';
+      case ExceptionSeverity.medium:
+        return '🟠 MEDIUM';
+      case ExceptionSeverity.low:
+        return '🟢 LOW';
+      case ExceptionSeverity.info:
+        return 'ℹ️ INFO';
     }
   }
 

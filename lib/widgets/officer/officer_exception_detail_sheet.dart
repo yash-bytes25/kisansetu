@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/officer_exception_model.dart';
+import '../../models/officer_queue_item.dart';
 import '../../screens/officer_farmer_detail_screen.dart';
+import '../../services/auth_service.dart';
 import '../../services/procurement_state_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
@@ -50,8 +52,11 @@ class _OfficerExceptionDetailSheetState
     switch (severity) {
       case ExceptionSeverity.critical:
         return AppColors.error;
+      case ExceptionSeverity.high:
       case ExceptionSeverity.warning:
         return AppColors.warning;
+      case ExceptionSeverity.medium:
+      case ExceptionSeverity.low:
       case ExceptionSeverity.info:
         return const Color(0xFF0277BD);
     }
@@ -61,8 +66,11 @@ class _OfficerExceptionDetailSheetState
     switch (severity) {
       case ExceptionSeverity.critical:
         return AppColors.errorContainer;
+      case ExceptionSeverity.high:
       case ExceptionSeverity.warning:
         return AppColors.warningContainer;
+      case ExceptionSeverity.medium:
+      case ExceptionSeverity.low:
       case ExceptionSeverity.info:
         return const Color(0xFFE1F5FE);
     }
@@ -72,8 +80,11 @@ class _OfficerExceptionDetailSheetState
     switch (severity) {
       case ExceptionSeverity.critical:
         return Icons.error_rounded;
+      case ExceptionSeverity.high:
       case ExceptionSeverity.warning:
         return Icons.warning_amber_rounded;
+      case ExceptionSeverity.medium:
+      case ExceptionSeverity.low:
       case ExceptionSeverity.info:
         return Icons.info_outline_rounded;
     }
@@ -201,69 +212,202 @@ class _OfficerExceptionDetailSheetState
                   ),
                   const SizedBox(height: 16),
 
-                  // Farmer / Token quick strip if present
-                  if (_currentException.tokenNumber != null ||
-                      _currentException.farmerName != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.person_outline_rounded,
-                              size: 20, color: AppColors.primaryGreen),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                  // Farmer / Token / Operational detail strip
+                  Builder(
+                    builder: (context) {
+                      OfficerQueueItem? queueItem;
+                      if (_currentException.tokenNumber != null) {
+                        final matches = _service.queue.where((q) =>
+                            q.tokenNumber == _currentException.tokenNumber);
+                        if (matches.isNotEmpty) {
+                          queueItem = matches.first;
+                        }
+                      }
+
+                      final crop = queueItem?.crop ??
+                          _currentException.metadata['crop']?.toString() ??
+                          _service.farmerData.cropName;
+                      final quantity = queueItem?.quantity ??
+                          _currentException.metadata['quantity']?.toString() ??
+                          '50 Quintals';
+                      final actualQty = queueItem?.actualQuantity ??
+                          _currentException.metadata['actualQuantity']?.toString();
+                      final bookingStatus = queueItem?.status ?? 'Active';
+                      final queueStatus = queueItem != null
+                          ? '${queueItem.checkInStatus} (${queueItem.peopleAhead} ahead, ~${queueItem.approxWaitMinutes} min)'
+                          : 'Queue Active';
+                      final centre = _currentException.centreId.isNotEmpty
+                          ? _currentException.centreId
+                          : _service.centreName;
+                      final detectedTime =
+                          '${_currentException.createdTimestamp.hour.toString().padLeft(2, '0')}:${_currentException.createdTimestamp.minute.toString().padLeft(2, '0')}';
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.cardBorder),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                if (_currentException.farmerName != null)
-                                  Text(
-                                    _currentException.farmerName!,
-                                    style: AppTextStyles.labelLarge.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                    ),
+                                const Icon(Icons.person_outline_rounded,
+                                    size: 20, color: AppColors.primaryGreen),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _currentException.farmerName ??
+                                            queueItem?.farmerName ??
+                                            'Operational Facility Anomaly',
+                                        style:
+                                            AppTextStyles.labelLarge.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      Text(
+                                        _currentException.tokenNumber != null
+                                            ? 'Token: ${_currentException.tokenNumber}'
+                                            : 'Centre: $centre',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                ),
                                 if (_currentException.tokenNumber != null)
-                                  Text(
-                                    'Token: ${_currentException.tokenNumber}',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.textSecondary,
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              OfficerFarmerDetailScreen(
+                                            tokenNumber:
+                                                _currentException.tokenNumber!,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.open_in_new_rounded,
+                                        size: 16),
+                                    label: const Text('Open Detail'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: AppColors.primaryGreen,
+                                      visualDensity: VisualDensity.compact,
                                     ),
                                   ),
                               ],
                             ),
-                          ),
-                          if (_currentException.tokenNumber != null)
-                            TextButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => OfficerFarmerDetailScreen(
-                                      tokenNumber:
-                                          _currentException.tokenNumber!,
-                                    ),
+                            const Divider(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Crop & Quantity',
+                                        style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.textSecondary),
+                                      ),
+                                      Text(
+                                        '$crop • $quantity',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.open_in_new_rounded,
-                                  size: 16),
-                              label: const Text('Open Detail'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.primaryGreen,
-                                visualDensity: VisualDensity.compact,
-                              ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Booking / Queue Status',
+                                        style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.textSecondary),
+                                      ),
+                                      Text(
+                                        '$bookingStatus • $queueStatus',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                            fontWeight: FontWeight.w600),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Centre',
+                                        style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.textSecondary),
+                                      ),
+                                      Text(
+                                        centre,
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                            fontWeight: FontWeight.w600),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Timestamps',
+                                        style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.textSecondary),
+                                      ),
+                                      Text(
+                                        'Detected $detectedTime${queueItem?.bookedSlot != null ? ' (Slot: ${queueItem!.bookedSlot})' : ''}',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                            fontWeight: FontWeight.w600),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (actualQty != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Expected: $quantity vs Actual: $actualQty',
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: AppColors.secondary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
 
                   // Explainability Section: Root Cause & Measurable Factors
                   Container(
@@ -363,6 +507,13 @@ class _OfficerExceptionDetailSheetState
                           status: ExceptionStatus.acknowledged,
                         );
                       });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Alert acknowledged.'),
+                          backgroundColor: AppColors.primaryGreen,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.check_circle_outline_rounded,
                         size: 16),
@@ -381,14 +532,54 @@ class _OfficerExceptionDetailSheetState
               if (_currentException.status != ExceptionStatus.resolved) ...[
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      _service.resolveException(_currentException.id);
-                      setState(() {
-                        _currentException = _currentException.copyWith(
-                          status: ExceptionStatus.resolved,
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Resolve Exception?'),
+                          content: Text(
+                            'Confirm resolution of "${_currentException.title}"?\nThis will mark the exception resolved and update the dashboard counts.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryGreen,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Resolve'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        final officerId =
+                            AuthService.instance.currentUserId ?? 'OFF-101';
+                        _service.resolveException(
+                          _currentException.id,
+                          officerId: officerId,
                         );
-                      });
-                      Navigator.of(context).pop();
+                        setState(() {
+                          _currentException = _currentException.copyWith(
+                            status: ExceptionStatus.resolved,
+                          );
+                        });
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Exception resolved.'),
+                              backgroundColor: AppColors.primaryGreen,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
                     },
                     icon: const Icon(Icons.done_all_rounded, size: 16),
                     label: const Text('Mark Resolved'),

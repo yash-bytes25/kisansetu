@@ -17,11 +17,15 @@ import '../widgets/farmer/produce_summary_card.dart';
 import '../widgets/farmer/token_card.dart';
 import '../widgets/farmer/farmer_journey_tracker.dart';
 import 'farmer_book_slot_screen.dart';
+import 'farmer/farmer_voice_assistant_screen.dart';
 import 'farmer_crop_selection_screen.dart';
+import 'farmer_digital_pass_screen.dart';
 import 'farmer_messages_screen.dart';
 import 'farmer_my_token_screen.dart';
+import 'farmer_payment_history_screen.dart';
 import 'farmer_payment_screen.dart';
 import 'farmer_procurement_status_screen.dart';
+import 'farmer_profile_screen.dart';
 import 'language_preferences_screen.dart';
 import 'role_selection_screen.dart';
 
@@ -199,6 +203,8 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
         crop: updatedData.cropName,
         quantity: updatedData.quantity,
       );
+    }
+    if (mounted) {
       setState(() {
         _dashboardData = _service.farmerData;
       });
@@ -245,6 +251,7 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
           currentQuantity: currentQty,
           isHindi: _isHindi,
           isTelugu: _isTelugu,
+          showProminentOnly: true,
         ),
       ),
     );
@@ -260,6 +267,57 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => FarmerPaymentScreen(
+          isHindi: _isHindi,
+          isTelugu: _isTelugu,
+        ),
+      ),
+    );
+  }
+
+  void _openDigitalPass() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => FarmerDigitalPassScreen(
+          bookingData: _effectiveData,
+          isHindi: _isHindi,
+          isTelugu: _isTelugu,
+          onBookSlot: _openBookSlot,
+        ),
+      ),
+    );
+  }
+
+  void _openDownloadReceipt() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => FarmerPaymentHistoryScreen(
+          isHindi: _isHindi,
+          isTelugu: _isTelugu,
+        ),
+      ),
+    );
+  }
+
+  void _openProfile() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => FarmerProfileScreen(
+          isHindi: _isHindi,
+          isTelugu: _isTelugu,
+        ),
+      ),
+    );
+    if (mounted) {
+      setState(() {
+        _dashboardData = _service.farmerData;
+      });
+    }
+  }
+
+  void _openVoiceAssistant() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => FarmerVoiceAssistantScreen(
           isHindi: _isHindi,
           isTelugu: _isTelugu,
         ),
@@ -347,28 +405,28 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
     }
     if (index == 1) {
       setState(() { _currentTabIndex = 1; });
-      _openMyToken();
+      _openPayment();
       if (mounted) setState(() { _currentTabIndex = 0; });
       return;
     }
     if (index == 2) {
       setState(() { _currentTabIndex = 2; });
-      _openPayment();
-      if (mounted) setState(() { _currentTabIndex = 0; });
-      return;
-    }
-    if (index == 3) {
-      setState(() { _currentTabIndex = 3; });
       _openMessages();
       if (mounted) setState(() { _currentTabIndex = 0; });
       return;
     }
-
-    // index == 4: More — open Language & Voice Preferences
-    if (index == 4) {
+    if (index == 3) {
+      // index == 3: More — open Language & Voice Preferences
       LanguagePreferencesScreen.show(context).then((_) {
         if (mounted) setState(() { _currentTabIndex = 0; });
       });
+      return;
+    }
+    if (index == 4) {
+      // index == 4: My Profile
+      setState(() { _currentTabIndex = 4; });
+      _openProfile();
+      if (mounted) setState(() { _currentTabIndex = 0; });
       return;
     }
 
@@ -512,6 +570,92 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVoiceAssistantBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        key: const Key('btn_voice_assistant'),
+        onTap: _openVoiceAssistant,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryGreen.withValues(alpha: 0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.mic_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _isTelugu
+                          ? '🎤 కిసాన్ సేతు వాయిస్ అసిస్టెంట్'
+                          : (_isHindi
+                              ? '🎤 किसानसेतु वॉइस असिस्टेंट'
+                              : '🎤 Ask KisanSetu'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _isTelugu
+                          ? 'స్లాట్ బుకింగ్, క్యూ, లేదా చెల్లింపు వివరాల కోసం మాట్లాడండి'
+                          : (_isHindi
+                              ? 'स्लॉट बुकिंग, कतार या भुगतान के लिए बोलें'
+                              : 'Speak naturally to book slot, check queue or payment'),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white70,
+                size: 16,
+              ),
+            ],
           ),
         ),
       ),
@@ -792,98 +936,106 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 1400),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Left Column: Operations & Recommendations
-                              Expanded(
-                                flex: 6,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    if (!isOnline) ...[
-                                      TokenCard(
-                                        data: data,
-                                        isHindi: _isHindi,
-                                        isTelugu: _isTelugu,
-                                        onViewToken: _openMyToken,
-                                        isCompact: true,
-                                      ),
-                                      const SizedBox(height: 12),
-                                    ],
-                                    ProduceSummaryCard(
-                                      data: data,
-                                      isHindi: _isHindi,
-                                      isTelugu: _isTelugu,
-                                      onTap: _openProcurementStatus,
-                                      onChangeCrop: _openChangeCrop,
-                                      isCompact: true,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Left Column: Operations & Recommendations
+                                  Expanded(
+                                    flex: 6,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (!isOnline) ...[
+                                          TokenCard(
+                                            data: data,
+                                            isHindi: _isHindi,
+                                            isTelugu: _isTelugu,
+                                            onViewToken: _openMyToken,
+                                            isCompact: true,
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+                                        ProduceSummaryCard(
+                                          data: data,
+                                          isHindi: _isHindi,
+                                          isTelugu: _isTelugu,
+                                          onTap: _openProcurementStatus,
+                                          onChangeCrop: _openChangeCrop,
+                                          isCompact: true,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        GoTimeCard(
+                                          data: data,
+                                          isHindi: _isHindi,
+                                          isTelugu: _isTelugu,
+                                          isCompact: true,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _buildNotificationPreview(),
+                                      ],
                                     ),
-                                    const SizedBox(height: 12),
-                                    GoTimeCard(
-                                      data: data,
-                                      isHindi: _isHindi,
-                                      isTelugu: _isTelugu,
-                                      isCompact: true,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildNotificationPreview(),
-                                    const SizedBox(height: 14),
-                                    InkWell(
-                                      onTap: _openMyToken,
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: FarmerJourneyTracker(
-                                        currentStatus: data.lifecycleStatus,
-                                        checkInStatus: data.checkInStatus,
-                                        paymentStatus: data.paymentStatus,
-                                        isHindi: _isHindi,
-                                        isTelugu: _isTelugu,
-                                        isCompact: true,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 18),
+                                  ),
+                                  const SizedBox(width: 18),
 
-                              // Right Column: My Token & Quick Actions
-                              Expanded(
-                                flex: 5,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    if (isOnline) ...[
-                                      TokenCard(
-                                        data: data,
-                                        isHindi: _isHindi,
-                                        isTelugu: _isTelugu,
-                                        onViewToken: _openMyToken,
-                                        isCompact: true,
-                                      ),
-                                      const SizedBox(height: 16),
-                                    ],
-                                    Text(
-                                      _isTelugu
-                                          ? 'త్వరిత చర్యలు'
-                                          : (_isHindi
-                                              ? 'त्वरित कार्य'
-                                              : 'Quick Actions'),
-                                      style: AppTextStyles.titleMedium,
+                                  // Right Column: My Token & Quick Actions
+                                  Expanded(
+                                    flex: 5,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (isOnline) ...[
+                                          TokenCard(
+                                            data: data,
+                                            isHindi: _isHindi,
+                                            isTelugu: _isTelugu,
+                                            onViewToken: _openMyToken,
+                                            isCompact: true,
+                                          ),
+                                          const SizedBox(height: 16),
+                                        ],
+                                        _buildVoiceAssistantBanner(),
+                                        Text(
+                                          _isTelugu
+                                              ? 'త్వరిత చర్యలు'
+                                              : (_isHindi
+                                                  ? 'त्वरित कार्य'
+                                                  : 'Quick Actions'),
+                                          style: AppTextStyles.titleMedium,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        FarmerActionGrid(
+                                          isHindi: _isHindi,
+                                          isTelugu: _isTelugu,
+                                          onBookSlot: _openBookSlot,
+                                          onPayment: _openPayment,
+                                          onDigitalPass: _openDigitalPass,
+                                          onDownloadReceipt:
+                                              _openDownloadReceipt,
+                                          isCompact: true,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 10),
-                                    FarmerActionGrid(
-                                      isHindi: _isHindi,
-                                      isTelugu: _isTelugu,
-                                      onBookSlot: _openBookSlot,
-                                      onMyToken: _openMyToken,
-                                      onPayment: _openPayment,
-                                      onMyProduce: _openProcurementStatus,
-                                      onMessages: _openMessages,
-                                      unreadMessagesCount:
-                                          _notifService.unreadCount,
-                                      isCompact: true,
-                                    ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+
+                              // Full-width Procurement Journey Tracker
+                              InkWell(
+                                onTap: _openMyToken,
+                                borderRadius: BorderRadius.circular(16),
+                                child: FarmerJourneyTracker(
+                                  currentStatus: data.lifecycleStatus,
+                                  checkInStatus: data.checkInStatus,
+                                  paymentStatus: data.paymentStatus,
+                                  isHindi: _isHindi,
+                                  isTelugu: _isTelugu,
+                                  isCompact: false,
                                 ),
                               ),
                             ],
@@ -954,7 +1106,8 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                           _buildNotificationPreview(),
                           const SizedBox(height: 16),
 
-                          // 6. Quick Actions
+                          // 6. Voice Assistant & Quick Actions
+                          _buildVoiceAssistantBanner(),
                           Text(
                             _isTelugu
                                 ? 'త్వరిత చర్యలు'
@@ -966,8 +1119,10 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                             isHindi: _isHindi,
                             isTelugu: _isTelugu,
                             onBookSlot: _openBookSlot,
-                            onMyToken: _openMyToken,
                             onPayment: _openPayment,
+                            onDigitalPass: _openDigitalPass,
+                            onDownloadReceipt: _openDownloadReceipt,
+                            onMyToken: _openMyToken,
                             onMyProduce: _openProcurementStatus,
                             onMessages: _openMessages,
                             unreadMessagesCount: _notifService.unreadCount,
@@ -1016,6 +1171,9 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                         ),
                         const SizedBox(height: 22),
 
+                        // Voice Assistant
+                        _buildVoiceAssistantBanner(),
+
                         // Section Heading for Quick Actions
                         Text(
                           _isTelugu
@@ -1030,8 +1188,10 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                           isHindi: _isHindi,
                           isTelugu: _isTelugu,
                           onBookSlot: _openBookSlot,
-                          onMyToken: _openMyToken,
                           onPayment: _openPayment,
+                          onDigitalPass: _openDigitalPass,
+                          onDownloadReceipt: _openDownloadReceipt,
+                          onMyToken: _openMyToken,
                           onMyProduce: _openProcurementStatus,
                           onMessages: _openMessages,
                           unreadMessagesCount: _notifService.unreadCount,
@@ -1097,21 +1257,6 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                 ),
               ),
               label: _isTelugu ? 'హోమ్' : (_isHindi ? 'होम' : 'Home'),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.confirmation_number_outlined),
-              activeIcon: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.confirmation_number_rounded,
-                  color: AppColors.primaryGreen,
-                ),
-              ),
-              label: _isTelugu ? 'నా టోకెన్' : (_isHindi ? 'मेरा टोकन' : 'My Token'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.payments_outlined),
@@ -1227,6 +1372,23 @@ class _FarmerDashboardScreenState extends State<FarmerDashboardScreen> {
                 ),
               ),
               label: _isTelugu ? 'మరిన్ని' : (_isHindi ? 'अधिक' : 'More'),
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.person_outline_rounded),
+              activeIcon: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: AppColors.primaryGreen,
+                ),
+              ),
+              label: _isTelugu
+                  ? 'నా ప్రొఫైల్'
+                  : (_isHindi ? 'मेरी प्रोफ़ाइल' : 'My Profile'),
             ),
           ],
         ),

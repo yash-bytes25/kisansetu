@@ -23,11 +23,13 @@ class PaymentCalculationResult {
 
 /// Service dedicated to transparent procurement pricing and MSP calculations.
 ///
-/// Kept strictly isolated from UI widgets so that future backend/government APIs
-/// can easily supply dynamic MSP rates and deduction rules.
+/// MSP rates are official reference benchmarks based on Government of India
+/// Cabinet Committee on Economic Affairs (CCEA) Minimum Support Prices (Kharif / Rabi 2024-25).
+/// Payment calculations and statuses are simulated prototypes for SIH demonstration
+/// and do not connect to live banking clearinghouses or direct financial institutions.
 class PaymentCalculationService {
-  /// Default prototype MSP rates per quintal.
-  /// Clearly labeled as simulated prototype data.
+  /// Reference benchmark MSP rates per quintal (CCEA 2024-25).
+  /// Clearly labeled as simulated reference benchmark data.
   static const Map<String, double> mockMspRates = {
     'wheat': 2275.0,
     'paddy': 2300.0,
@@ -135,7 +137,7 @@ class PaymentCalculationService {
     String qualityGrade = 'FAQ',
     double deductions = 0.0,
   }) {
-    final rate = mockMspRates[crop] ?? 2275.0;
+    final rate = getMspRate(crop);
 
     // Optional grade adjustments (Grade A premium, Grade B small discount if desired, default 1.0)
     double gradeMultiplier = 1.0;

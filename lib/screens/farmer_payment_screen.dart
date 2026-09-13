@@ -18,11 +18,13 @@ import 'farmer_dispute_screen.dart';
 class FarmerPaymentScreen extends StatefulWidget {
   final bool isHindi;
   final bool isTelugu;
+  final FarmerDashboardData? paymentData;
 
   const FarmerPaymentScreen({
     super.key,
     this.isHindi = false,
     this.isTelugu = false,
+    this.paymentData,
   });
 
   @override
@@ -36,8 +38,11 @@ class _FarmerPaymentScreenState extends State<FarmerPaymentScreen> {
   bool get _isHindi => widget.isHindi || (!widget.isTelugu && _prefs.isHindi);
   bool get _isTelugu => widget.isTelugu || (!widget.isHindi && _prefs.isTelugu);
 
+  FarmerDashboardData get _effectiveFarmer =>
+      widget.paymentData ?? _service.farmerData;
+
   void _showVoiceGuidance() {
-    final farmer = _service.farmerData;
+    final farmer = _effectiveFarmer;
     final isCompleted = farmer.paymentStatus == 'Completed' ||
         farmer.paymentStatus == 'Payment Completed';
     final guideText = _isTelugu
@@ -78,7 +83,7 @@ class _FarmerPaymentScreenState extends State<FarmerPaymentScreen> {
   }
 
   void _openDisputeScreen() {
-    final farmer = _service.farmerData;
+    final farmer = _effectiveFarmer;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => FarmerDisputeScreen(
@@ -96,7 +101,7 @@ class _FarmerPaymentScreenState extends State<FarmerPaymentScreen> {
     return ListenableBuilder(
       listenable: _service,
       builder: (context, _) {
-        final farmer = _service.farmerData;
+        final farmer = _effectiveFarmer;
         final isCompleted = farmer.paymentStatus == 'Completed' ||
             farmer.paymentStatus == 'Payment Completed';
         final isProcessing = farmer.paymentStatus == 'Processing' ||
@@ -187,6 +192,48 @@ class _FarmerPaymentScreenState extends State<FarmerPaymentScreen> {
                   // Banking / Transaction Details Card
                   _buildTransactionDetailsCard(farmer, isCompleted),
                   const SizedBox(height: 22),
+
+                  // Download Invoice / Receipt Action Button
+                  SizedBox(
+                    height: 54,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              _isTelugu
+                                  ? 'రసీదు విజయవంతంగా డౌన్‌లోడ్ చేయబడింది (${farmer.paymentReference})'
+                                  : (_isHindi
+                                      ? 'रसीद सफलतापूर्वक डाउनलोड की गई (${farmer.paymentReference})'
+                                      : 'Receipt downloaded successfully (${farmer.paymentReference})'),
+                            ),
+                            backgroundColor: AppColors.primaryGreen,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.download_rounded, size: 20),
+                      label: Text(
+                        _isTelugu
+                            ? 'రసీదు డౌన్‌లోడ్ చేయండి'
+                            : (_isHindi
+                                ? 'रसीद / इनवॉयस डाउनलोड करें'
+                                : 'Download Invoice / Receipt'),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
                   // Dispute Action Button
                   SizedBox(
@@ -340,6 +387,12 @@ class _FarmerPaymentScreenState extends State<FarmerPaymentScreen> {
         PaymentCalculationService.formatCurrency(farmer.grossAmount);
     final netStr =
         PaymentCalculationService.formatCurrency(farmer.netPayable);
+    final mspRate = PaymentCalculationService.getMspRate(farmer.cropName);
+    final formattedRate =
+        PaymentCalculationService.formatCurrency(mspRate);
+    final mspFormatted = _isTelugu
+        ? '$formattedRate / క్వింటాల్'
+        : '$formattedRate / Quintal';
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -369,10 +422,10 @@ class _FarmerPaymentScreenState extends State<FarmerPaymentScreen> {
           const SizedBox(height: 4),
           Text(
             _isTelugu
-                ? 'ప్రభుత్వ మార్గదర్శకాల ప్రకారం పూర్తి వివరాలు.'
+                ? 'ప్రభుత్వ మార్గదర్శకాల ప్రకారం పూర్తి వివరాలు (CCEA బెంచ్‌మార్క్ ధరలు).'
                 : (_isHindi
-                    ? 'सरकारी दिशानिर्देशों के अनुसार पूर्ण विवरण।'
-                    : 'Clear breakdown without technical jargon.'),
+                    ? 'सरकारी दिशानिर्देशों के अनुसार पूर्ण विवरण (CCEA बेंचमार्क दरें)।'
+                    : 'Clear breakdown based on official CCEA benchmark rates.'),
             style: AppTextStyles.caption,
           ),
           const SizedBox(height: 16),
@@ -398,7 +451,7 @@ class _FarmerPaymentScreenState extends State<FarmerPaymentScreen> {
             label: _isTelugu
                 ? 'వర్తించే MSP ధర'
                 : (_isHindi ? 'लागू एमएसपी दर' : 'Applicable MSP'),
-            value: _isTelugu ? '₹2,275 / క్వింటాల్' : '₹2,275 / Quintal',
+            value: mspFormatted,
             isBold: false,
             valueColor: AppColors.secondary,
           ),

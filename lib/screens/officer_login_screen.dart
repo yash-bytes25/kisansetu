@@ -99,6 +99,7 @@ class _OfficerLoginScreenState extends State<OfficerLoginScreen> {
         MaterialPageRoute<void>(
           builder: (context) => OfficerDashboardScreen(
             officerId: result.officerId ?? 'OFFICER001',
+            centreId: result.centreId,
           ),
         ),
       );

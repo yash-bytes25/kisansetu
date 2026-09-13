@@ -22,8 +22,10 @@ class FarmerActionGrid extends StatelessWidget {
   final bool isHindi;
   final bool isTelugu;
   final VoidCallback? onBookSlot;
-  final VoidCallback? onMyToken;
   final VoidCallback? onPayment;
+  final VoidCallback? onDigitalPass;
+  final VoidCallback? onDownloadReceipt;
+  final VoidCallback? onMyToken;
   final VoidCallback? onMyProduce;
   final VoidCallback? onMessages;
   final int unreadMessagesCount;
@@ -35,8 +37,10 @@ class FarmerActionGrid extends StatelessWidget {
     required this.isHindi,
     this.isTelugu = false,
     this.onBookSlot,
-    this.onMyToken,
     this.onPayment,
+    this.onDigitalPass,
+    this.onDownloadReceipt,
+    this.onMyToken,
     this.onMyProduce,
     this.onMessages,
     this.unreadMessagesCount = 0,
@@ -52,34 +56,22 @@ class FarmerActionGrid extends StatelessWidget {
       icon: Icons.calendar_month_rounded,
     ),
     FarmerActionItem(
-      titleEn: 'My Token',
-      titleHi: 'मेरा टोकन',
-      titleTe: 'నా టోకెన్',
-      icon: Icons.confirmation_number_rounded,
-    ),
-    FarmerActionItem(
-      titleEn: 'My Turn',
-      titleHi: 'मेरी बारी',
-      titleTe: 'నా వంతు',
-      icon: Icons.access_time_filled_rounded,
-    ),
-    FarmerActionItem(
       titleEn: 'Payment',
       titleHi: 'भुगतान',
       titleTe: 'చెల్లింపు',
       icon: Icons.payments_rounded,
     ),
     FarmerActionItem(
-      titleEn: 'Messages',
-      titleHi: 'संदेश',
-      titleTe: 'సందేశాలు',
-      icon: Icons.notifications_active_rounded,
+      titleEn: 'Digital Pass / QR',
+      titleHi: 'डिजिटल पास / क्यूआर',
+      titleTe: 'డిజిటల్ పాస్ / QR',
+      icon: Icons.qr_code_2_rounded,
     ),
     FarmerActionItem(
-      titleEn: 'My Produce',
-      titleHi: 'मेरी उपज',
-      titleTe: 'నా పంట',
-      icon: Icons.grass_rounded,
+      titleEn: 'Download Invoice / Receipt',
+      titleHi: 'रसीद / इनवॉयस डाउनलोड',
+      titleTe: 'రసీదు / ఇన్‌వాయిస్ డౌన్‌లోడ్',
+      icon: Icons.receipt_long_rounded,
     ),
   ];
 
@@ -89,9 +81,8 @@ class FarmerActionGrid extends StatelessWidget {
       builder: (context, constraints) {
         final compact = isCompact ??
             (ResponsiveLayout.isDesktop(context) || constraints.maxWidth >= 500);
-        final cols = crossAxisCount ??
-            (constraints.maxWidth >= 650 ? 3 : 2);
-        final ratio = compact ? 2.0 : 1.5;
+        final cols = crossAxisCount ?? 2;
+        final ratio = compact ? 2.2 : 1.7;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -121,13 +112,33 @@ class FarmerActionGrid extends StatelessWidget {
                       onBookSlot!();
                       return;
                     }
+                    if (item.titleEn == 'Payment' && onPayment != null) {
+                      onPayment!();
+                      return;
+                    }
+                    if (item.titleEn == 'Digital Pass / QR') {
+                      if (onDigitalPass != null) {
+                        onDigitalPass!();
+                        return;
+                      }
+                      if (onMyToken != null) {
+                        onMyToken!();
+                        return;
+                      }
+                    }
+                    if (item.titleEn == 'Download Invoice / Receipt') {
+                      if (onDownloadReceipt != null) {
+                        onDownloadReceipt!();
+                        return;
+                      }
+                      if (onPayment != null) {
+                        onPayment!();
+                        return;
+                      }
+                    }
                     if ((item.titleEn == 'My Token' || item.titleEn == 'My Turn') &&
                         onMyToken != null) {
                       onMyToken!();
-                      return;
-                    }
-                    if (item.titleEn == 'Payment' && onPayment != null) {
-                      onPayment!();
                       return;
                     }
                     if (item.titleEn == 'My Produce' && onMyProduce != null) {
@@ -157,7 +168,7 @@ class FarmerActionGrid extends StatelessWidget {
                   child: Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: compact ? 10 : 14,
-                      vertical: compact ? 8 : 14,
+                      vertical: compact ? 8 : 12,
                     ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
@@ -166,52 +177,36 @@ class FarmerActionGrid extends StatelessWidget {
                     child: Row(
                       children: [
                         Container(
-                          width: compact ? 36 : 46,
-                          height: compact ? 36 : 46,
+                          width: compact ? 36 : 44,
+                          height: compact ? 36 : 44,
                           decoration: BoxDecoration(
                             color: AppColors.primaryContainer,
                             borderRadius: BorderRadius.circular(compact ? 10 : 12),
                           ),
                           child: Icon(
                             item.icon,
-                            size: compact ? 20 : 26,
+                            size: compact ? 20 : 24,
                             color: AppColors.primaryGreen,
                           ),
                         ),
-                        SizedBox(width: compact ? 8 : 12),
+                        SizedBox(width: compact ? 8 : 10),
                         Expanded(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  style: TextStyle(
-                                    fontSize: compact ? 13 : 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                              ),
-                              if (item.titleEn == 'Messages' &&
-                                  unreadMessagesCount > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryGreen,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    '[$unreadMessagesCount]',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: compact ? 12 : 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: compact ? 18 : 20,
+                          color: AppColors.textTertiary,
                         ),
                       ],
                     ),

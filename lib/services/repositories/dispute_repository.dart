@@ -14,7 +14,7 @@ abstract class DisputeRepository {
     required String description,
   });
   Future<List<FarmerDisputeReport>> getDisputes(String farmerId);
-  Future<bool> updateDisputeStatus(String disputeId, String status);
+  Future<bool> updateDisputeStatus(String disputeId, String status, {String? officerNotes});
 }
 
 /// Local in-memory implementation of [DisputeRepository].
@@ -47,17 +47,13 @@ class LocalDisputeRepository implements DisputeRepository {
   }
 
   @override
-  Future<bool> updateDisputeStatus(String disputeId, String status) async {
+  Future<bool> updateDisputeStatus(String disputeId, String status, {String? officerNotes}) async {
     for (int i = 0; i < _inMemoryDisputes.length; i++) {
       if (_inMemoryDisputes[i].id == disputeId) {
-        _inMemoryDisputes[i] = FarmerDisputeReport(
-          id: _inMemoryDisputes[i].id,
-          tokenNumber: _inMemoryDisputes[i].tokenNumber,
-          farmerName: _inMemoryDisputes[i].farmerName,
-          reason: _inMemoryDisputes[i].reason,
-          explanation: _inMemoryDisputes[i].explanation,
-          submittedAt: _inMemoryDisputes[i].submittedAt,
+        _inMemoryDisputes[i] = _inMemoryDisputes[i].copyWith(
           status: status,
+          officerNotes: officerNotes ?? _inMemoryDisputes[i].officerNotes,
+          resolvedAt: status == 'Resolved' ? DateTime.now() : _inMemoryDisputes[i].resolvedAt,
         );
         return true;
       }
@@ -152,22 +148,26 @@ class SupabaseDisputeRepository implements DisputeRepository {
   }
 
   @override
-  Future<bool> updateDisputeStatus(String disputeId, String status) async {
+  Future<bool> updateDisputeStatus(String disputeId, String status, {String? officerNotes}) async {
     if (!_supabase.isReady) {
-      return await LocalDisputeRepository().updateDisputeStatus(disputeId, status);
+      return await LocalDisputeRepository().updateDisputeStatus(disputeId, status, officerNotes: officerNotes);
     }
     try {
+      final Map<String, dynamic> updateMap = {
+        'status': status,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (officerNotes != null) {
+        updateMap['officer_notes'] = officerNotes;
+      }
       await _supabase.client!
           .from('disputes')
-          .update({
-            'status': status,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
+          .update(updateMap)
           .eq('tracking_id', disputeId);
       return true;
     } catch (e) {
       debugPrint('SupabaseDisputeRepository.updateDisputeStatus error: $e');
-      return await LocalDisputeRepository().updateDisputeStatus(disputeId, status);
+      return await LocalDisputeRepository().updateDisputeStatus(disputeId, status, officerNotes: officerNotes);
     }
   }
 }

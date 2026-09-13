@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/supabase_config.dart';
 import '../models/alternative_centre_recommendation.dart';
 import '../models/capacity_forecast_model.dart';
 import '../models/officer_exception_model.dart';
@@ -13,25 +14,31 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/responsive_layout.dart';
 import '../widgets/officer/officer_exception_detail_sheet.dart';
+import 'officer_centre_admin_screen.dart';
+import 'officer_dispute_console_screen.dart';
 import 'officer_farmer_detail_screen.dart';
+import 'officer_payment_oversight_screen.dart';
 import 'officer_qr_scanner_screen.dart';
 import 'role_selection_screen.dart';
 
-/// Phase 7: KisanSetu Procurement Officer Operations Dashboard.
+/// Phase 7 & Phase A: KisanSetu Procurement Officer Operations Dashboard.
 ///
 /// Designed with INFORMATION → DECIDE → CONTROL operational philosophy:
-/// - Real-time operational header with centre status and date.
-/// - 7-metric KPI summary grid.
+/// - Real-time operational header with centre status, live load, and date.
+/// - Comprehensive 11-metric operational KPI summary grid.
+/// - 8 Core Operational Action Areas (Command Center).
 /// - Interactive Live Queue list with instant stage inspection.
 /// - Call Next Farmer and queue operational actions.
 /// - Real-time Centre Status & Capacity controls.
 /// - Slot capacity management section.
 class OfficerDashboardScreen extends StatefulWidget {
   final String officerId;
+  final String? centreId;
 
   const OfficerDashboardScreen({
     super.key,
     required this.officerId,
+    this.centreId,
   });
 
   @override
@@ -40,10 +47,728 @@ class OfficerDashboardScreen extends StatefulWidget {
 
 class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
   final _service = ProcurementStateService();
+  final GlobalKey _liveQueueKey = GlobalKey();
+  bool _isActionExecuting = false;
+
+  bool _verifyOfficerAuthorization([String? targetCentreId]) {
+    final authCentreId = AuthService.instance.currentCentreId;
+    final activeCentreId =
+        widget.centreId ?? '11111111-1111-1111-1111-111111111111';
+
+    if (authCentreId != null && authCentreId != activeCentreId) {
+      _showAccessRestrictedDialog();
+      return false;
+    }
+    if (targetCentreId != null &&
+        authCentreId != null &&
+        targetCentreId != authCentreId) {
+      _showAccessRestrictedDialog();
+      return false;
+    }
+    return true;
+  }
+
+  void _showAccessRestrictedDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.gpp_bad_rounded, color: AppColors.error),
+            SizedBox(width: 8),
+            Text('Access Restricted'),
+          ],
+        ),
+        content: const Text(
+          'You are not authorized to modify this procurement centre.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleScanFarmerQr() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const OfficerQrScannerScreen(),
+      ),
+    );
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _handleCallNextFarmer() async {
+    if (_isActionExecuting) return;
+    if (!_verifyOfficerAuthorization()) return;
+
+    final eligible = _service.queue.where((q) {
+      final s = q.status;
+      return (s == 'Waiting' ||
+          s == 'Arrived' ||
+          (s == 'Booked' && q.checkInStatus == 'Checked In'));
+    }).toList();
+
+    if (eligible.isEmpty) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No eligible farmer is currently waiting.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final nextFarmer = eligible.first;
+    final queuePosition = eligible.indexOf(nextFarmer) + 1;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.record_voice_over_rounded, color: AppColors.primaryGreen),
+            SizedBox(width: 8),
+            Text('Call next farmer?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Farmer:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.textSecondary),
+            ),
+            Text(
+              nextFarmer.farmerName,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Token:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.textSecondary),
+            ),
+            Text(
+              nextFarmer.tokenNumber,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: AppColors.primaryDark),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Queue position:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.textSecondary),
+            ),
+            Text(
+              '$queuePosition',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: AppColors.primaryGreen),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('CALL FARMER'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isActionExecuting = true);
+      try {
+        _service.callNextFarmer();
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Calling farmer: ${nextFarmer.farmerName} (${nextFarmer.tokenNumber})'),
+              backgroundColor: AppColors.primaryGreen,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isActionExecuting = false);
+        }
+      }
+    }
+  }
+
+  Future<void> _handleMarkArrived() async {
+    if (_isActionExecuting) return;
+    if (!_verifyOfficerAuthorization()) return;
+
+    final unarrived = _service.queue.where((q) {
+      return q.status == 'Booked' || q.checkInStatus != 'Checked In';
+    }).toList();
+
+    if (unarrived.isEmpty) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No pending arrival found.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    String selectedToken = unarrived.first.tokenNumber;
+
+    final confirmedToken = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.how_to_reg_rounded, color: AppColors.secondary),
+                  SizedBox(width: 8),
+                  Text('Mark Farmer Arrived'),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color:
+                            AppColors.primaryContainer.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color:
+                                AppColors.primaryGreen.withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 16, color: AppColors.primaryGreen),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Use Scan Farmer QR for QR-based check-in.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Select Farmer / Token for Manual Arrival:',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: unarrived.length,
+                        itemBuilder: (context, index) {
+                          final f = unarrived[index];
+                          final isSel = f.tokenNumber == selectedToken;
+                          return ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color: isSel
+                                    ? AppColors.primaryGreen
+                                    : AppColors.cardBorder,
+                                width: isSel ? 2 : 1,
+                              ),
+                            ),
+                            tileColor: isSel
+                                ? AppColors.primaryContainer
+                                    .withValues(alpha: 0.2)
+                                : null,
+                            leading: Icon(
+                              isSel
+                                  ? Icons.radio_button_checked_rounded
+                                  : Icons.radio_button_off_rounded,
+                              color: isSel
+                                  ? AppColors.primaryGreen
+                                  : AppColors.textTertiary,
+                            ),
+                            title: Text(
+                              '${f.farmerName} (${f.tokenNumber})',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                            subtitle: Text(
+                              '${f.crop} • ${f.quantity} • Slot: ${f.bookedSlot}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            onTap: () {
+                              setDialogState(() {
+                                selectedToken = f.tokenNumber;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(null),
+                  child: const Text('CANCEL'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(selectedToken),
+                  child: const Text('MARK ARRIVED'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmedToken != null) {
+      setState(() => _isActionExecuting = true);
+      try {
+        final farmer =
+            unarrived.firstWhere((q) => q.tokenNumber == confirmedToken);
+        _service.markArrived(confirmedToken);
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Farmer ${farmer.farmerName} (${farmer.tokenNumber}) marked arrived.'),
+              backgroundColor: AppColors.primaryGreen,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isActionExecuting = false);
+        }
+      }
+    }
+  }
+
+  Future<void> _handleStartProcessing() async {
+    if (_isActionExecuting) return;
+    if (!_verifyOfficerAuthorization()) return;
+
+    final ready = _service.queue.where((q) {
+      final s = q.status;
+      return (s == 'Waiting' ||
+          s == 'Arrived' ||
+          (s == 'Booked' && q.checkInStatus == 'Checked In'));
+    }).toList();
+
+    if (ready.isEmpty) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No eligible farmer is ready for processing.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final farmer = ready.first;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.play_circle_filled_rounded,
+                color: AppColors.primaryGreen),
+            SizedBox(width: 8),
+            Text('Start procurement processing?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Farmer:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.textSecondary),
+            ),
+            Text(
+              farmer.farmerName,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Token:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.textSecondary),
+            ),
+            Text(
+              farmer.tokenNumber,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: AppColors.primaryDark),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Crop:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.textSecondary),
+            ),
+            Text(
+              farmer.crop,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Quantity:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppColors.textSecondary),
+            ),
+            Text(
+              farmer.quantity,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: AppColors.textPrimary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('START PROCESSING'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isActionExecuting = true);
+      try {
+        _service.startProcurement(farmer.tokenNumber);
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Procurement started for ${farmer.farmerName} (${farmer.tokenNumber}).'),
+              backgroundColor: AppColors.primaryGreen,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          _openFarmerDetail(farmer.tokenNumber);
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isActionExecuting = false);
+        }
+      }
+    }
+  }
+
+  void _handleAcknowledgeAlert(OfficerExceptionModel ex) {
+    if (!_verifyOfficerAuthorization()) return;
+    _service.acknowledgeException(ex.id);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Alert acknowledged.'),
+        backgroundColor: AppColors.primaryGreen,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    setState(() {});
+  }
+
+  Future<void> _handleResolveAlert(OfficerExceptionModel ex) async {
+    if (!_verifyOfficerAuthorization()) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Resolve Exception?'),
+        content: Text(
+          'Confirm resolution of "${ex.title}"?\nThis will mark the exception resolved and update the dashboard counts.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Resolve'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final officerId = widget.officerId.isNotEmpty
+          ? widget.officerId
+          : (AuthService.instance.currentUserId ?? 'OFF-101');
+      _service.resolveException(ex.id, officerId: officerId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Exception resolved.'),
+            backgroundColor: AppColors.primaryGreen,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        setState(() {});
+      }
+    }
+  }
+
+  Future<void> _handleCentreStatusChange(String status) async {
+    if (!_verifyOfficerAuthorization()) return;
+
+    if (status == 'Temporarily Stopped') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Temporarily Stop Centre?'),
+            ],
+          ),
+          content: const Text(
+            'New arrivals and processing may be affected.\n\nAre you sure you want to stop centre intake temporarily?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('CANCEL'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('CONFIRM STOP'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+
+    _service.setCentreStatus(status);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Centre status updated: $status'),
+        backgroundColor: AppColors.primaryGreen,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    setState(() {});
+  }
+
+  Future<void> _handleUpdateDailyCapacity() async {
+    if (!_verifyOfficerAuthorization()) return;
+    final controller =
+        TextEditingController(text: _service.centreCapacity.toString());
+    final newCap = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Update Daily Capacity'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Capacity (Farmers/day)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = int.tryParse(controller.text);
+              if (val != null && val > 0) {
+                Navigator.of(ctx).pop(val);
+              }
+            },
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+
+    if (newCap != null && newCap > 0) {
+      final oldCap = _service.centreCapacity;
+      _service.updateCentreParameters(capacity: newCap);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Daily Capacity updated: $oldCap → $newCap Farmers/day'),
+          backgroundColor: AppColors.primaryGreen,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      setState(() {});
+    }
+  }
+
+  Future<void> _handleUpdateProcessingRate() async {
+    if (!_verifyOfficerAuthorization()) return;
+    final controller = TextEditingController(
+        text: _service.configuredProcessingRate.toString());
+    final newRate = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Update Processing Rate'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Hourly Rate (Qtl/hr)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = int.tryParse(controller.text);
+              if (val != null && val > 0) {
+                Navigator.of(ctx).pop(val);
+              }
+            },
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+
+    if (newRate != null && newRate > 0) {
+      final oldRate = _service.configuredProcessingRate;
+      _service.updateCentreParameters(processingRatePerHour: newRate);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Processing Rate: $oldRate Qtl/hr → $newRate Qtl/hr. Queue and Go-Time recommendations updated.'),
+          backgroundColor: AppColors.primaryGreen,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      setState(() {});
+    }
+  }
 
   void _showVoiceGuidance() {
     final text =
-        'Procurement Operations Dashboard. Centre: ${_service.centreName}. Status: ${_service.centreStatus}. ${_service.todayBookingsCount} bookings today, ${_service.waitingCount} waiting in queue. Tap Call Next Farmer to advance dock intake.';
+        'Procurement Operations Dashboard. Centre: ${_service.centreName}. Status: ${_service.centreStatus}. ${_service.todayBookingsCount} bookings today, ${_service.waitingCount} waiting in queue, ${_service.paymentPendingCount} payments pending DBT authorization. Access the 8 action areas below to manage gate check-in, intake, slots, and payout approvals.';
     VoiceAssistantSpeechService.instance.speak(text, language: 'en');
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -176,6 +901,574 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
     );
   }
 
+  void _showOfficerPaymentsDialog() {
+    final queue = _service.queue;
+    final pendingPayments =
+        queue.where((q) => q.paymentStatus == 'Pending').toList();
+    final totalPendingAmount = pendingPayments.fold<double>(
+        0.0, (acc, item) => acc + item.netPayable);
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.payments_rounded,
+                    color: AppColors.secondary, size: 22),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('DBT Payments & Settlements',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryContainer.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color:
+                              AppColors.primaryGreen.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Pending Clearance',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text(
+                                  '₹${totalPendingAmount.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.primaryGreen)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.warningContainer,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                              '${pendingPayments.length} Pending DBT',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.warning)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Farmer Disbursement Roster',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary)),
+                  const SizedBox(height: 8),
+                  ...queue.map((item) {
+                    final isPending = item.paymentStatus == 'Pending';
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    '${item.farmerName} (${item.tokenNumber})',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700)),
+                                Text(
+                                    'Net: ₹${item.netPayable.toStringAsFixed(2)} • Ref: ${item.paymentReference}',
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isPending
+                                  ? AppColors.warningContainer
+                                  : AppColors.primaryContainer,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isPending ? 'Pending' : 'Completed',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isPending
+                                    ? AppColors.warning
+                                    : AppColors.primaryGreen,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OfficerPaymentOversightScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.open_in_new_rounded, size: 16),
+              label: const Text('Full Oversight Console'),
+            ),
+            if (pendingPayments.isNotEmpty)
+              ElevatedButton.icon(
+                onPressed: () {
+                  for (final p in pendingPayments) {
+                    _service.markPaymentCompleted(p.tokenNumber);
+                  }
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Authorized and dispatched ${pendingPayments.length} DBT payment settlements.'),
+                      backgroundColor: AppColors.primaryGreen,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.check_circle_rounded, size: 18),
+                label: const Text('Authorize DBT Batch'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGreen,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showOfficerAnalyticsDialog() {
+    final summary = _service.capacityForecastSummary;
+    final queue = _service.queue;
+    final totalVolumeQuintals = queue.fold<double>(
+      0.0,
+      (acc, item) =>
+          acc +
+          (double.tryParse(item.actualQuantity
+                  .replaceAll(RegExp(r'[^0-9.]'), '')) ??
+              0.0),
+    );
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.insights_rounded,
+                    color: AppColors.secondary, size: 22),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Procurement Analytics & Forecast',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 540,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildAnalyticsMetricCard(
+                          title: "Today's Intake",
+                          value:
+                              '${totalVolumeQuintals.toStringAsFixed(1)} Qtl',
+                          icon: Icons.scale_rounded,
+                          color: AppColors.primaryGreen,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildAnalyticsMetricCard(
+                          title: 'Processing Rate',
+                          value: _service.processingRate,
+                          icon: Icons.speed_rounded,
+                          color: AppColors.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildAnalyticsMetricCard(
+                          title: 'Centre Load',
+                          value: '${_service.centreCapacityPercent}%',
+                          icon: Icons.pie_chart_rounded,
+                          color: _service.centreCapacityPercent > 80
+                              ? AppColors.warning
+                              : AppColors.primaryGreen,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildAnalyticsMetricCard(
+                          title: '2-Hr Risk Forecast',
+                          value: summary.peakCongestionLevel.nameEn.toUpperCase(),
+                          icon: Icons.trending_up_rounded,
+                          color: summary.hasHighOrCriticalRisk
+                              ? AppColors.error
+                              : AppColors.primaryGreen,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Intake Hourly Windows & Bottlenecks',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  ...summary.forecasts.take(4).map((f) {
+                    final isHighRisk = f.congestionLevel == CapacityCongestionLevel.highRisk ||
+                        f.congestionLevel == CapacityCongestionLevel.critical;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(f.windowLabel,
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w700)),
+                          Text(
+                              'Load: ${f.predictedLoadPercent}% • Risk: ${f.congestionLevel.nameEn}',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isHighRisk
+                                      ? AppColors.error
+                                      : AppColors.textSecondary)),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showOfficerProfileDialog() {
+    final centreId = widget.centreId ??
+        AuthService.instance.currentCentreId ??
+        '11111111-1111-1111-1111-111111111111';
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.badge_rounded,
+                    color: AppColors.secondary, size: 22),
+              ),
+              const SizedBox(width: 10),
+              const Text('Officer Credentials',
+                  style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildProfileRow('Officer ID', widget.officerId),
+              _buildProfileRow('Designation',
+                  'Procurement Officer (Intake Inspector)'),
+              _buildProfileRow('Assigned Centre', _service.centreName),
+              _buildProfileRow('Centre UUID', centreId),
+              _buildProfileRow(
+                  'Security Role', 'RLS Role: officer (Verified)'),
+              _buildProfileRow(
+                  'Authentication',
+                  SupabaseConfig.shouldUseSupabase
+                      ? 'Supabase Auth Session'
+                      : 'Local Prototype Mode'),
+              _buildProfileRow('Operating Status', _service.centreStatus),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color:
+                          AppColors.primaryGreen.withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.verified_user_rounded,
+                        color: AppColors.primaryGreen, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Authorized to validate gate QR passes, certify produce quality, and approve MSP DBT payouts.',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Dismiss'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _logout();
+              },
+              icon: const Icon(Icons.logout_rounded, size: 16),
+              label: const Text('Logout'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSlotManagementModal() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Dock Slot Management',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w900),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Configure procurement capacity windows to manage arrival velocities and avoid gate congestion.',
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSlotManagementSection(),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAnalyticsMetricCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _logout() async {
     await AuthService.instance.logout();
     if (!mounted) return;
@@ -274,6 +1567,15 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Officer Profile',
+                  icon: const Icon(
+                    Icons.account_circle_rounded,
+                    color: AppColors.secondary,
+                    size: 22,
+                  ),
+                  onPressed: _showOfficerProfileDialog,
+                ),
+                IconButton(
                   tooltip: 'Logout',
                   icon: const Icon(
                     Icons.logout_rounded,
@@ -359,11 +1661,15 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                             _buildCentreStatusBanner(),
                             const SizedBox(height: 12),
 
-                            // 2. High-Density Horizontal KPI Row
+                            // 2. Action Areas (8 Control Entry Points)
+                            _buildActionAreasSection(isCompact: true),
+                            const SizedBox(height: 12),
+
+                            // 3. High-Density Horizontal KPI Row
                             _buildKpiSummarySection(isCompact: true),
                             const SizedBox(height: 16),
 
-                            // 3. Two-Column Command Operations Layout
+                            // 4. Two-Column Command Operations Layout
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -421,41 +1727,45 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                     children: [
                       // 1. Operational Centre Status Banner
                       _buildCentreStatusBanner(),
+                      const SizedBox(height: 14),
+
+                      // 2. Action Areas (8 Control Entry Points)
+                      _buildActionAreasSection(),
                       const SizedBox(height: 16),
 
                       // Phase 14: "Needs Attention" Priority Exception Panel
                       _buildNeedsAttentionSection(),
                       const SizedBox(height: 16),
 
-                      // 2. KPI Summary Cards Grid
+                      // 3. KPI Summary Cards Grid
                       _buildKpiSummarySection(),
                       const SizedBox(height: 20),
 
-                      // 3. Primary Operational Actions Toolbar
+                      // 4. Primary Operational Actions Toolbar
                       _buildOperationalControlsSection(),
                       const SizedBox(height: 22),
 
-                      // 4. Live Queue Table/List
+                      // 5. Live Queue Table/List
                       _buildLiveQueueSection(),
                       const SizedBox(height: 22),
 
-                      // 5. Centre Status & Capacity Control
+                      // 6. Centre Status & Capacity Control
                       _buildControlsSection(),
                       const SizedBox(height: 22),
 
-                      // 6. Slot Management Section
+                      // 7. Slot Management Section
                       _buildSlotManagementSection(),
                       const SizedBox(height: 20),
 
-                      // 7. Dynamic Slot Reallocation Section
+                      // 8. Dynamic Slot Reallocation Section
                       _buildSlotReallocationSection(),
                       const SizedBox(height: 20),
 
-                      // 8. Catchment Alternative Centres Section
+                      // 9. Catchment Alternative Centres Section
                       _buildAlternativeCentresSection(),
                       const SizedBox(height: 20),
 
-                      // 9. Capacity Forecast Section
+                      // 10. Capacity Forecast Section
                       _buildCapacityForecastSection(),
                       const SizedBox(height: 20),
                     ],
@@ -473,56 +1783,584 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
   }
 
   Widget _buildCentreStatusBanner() {
-    Color bg = AppColors.primaryContainer;
+    Color bg = AppColors.primaryContainer.withValues(alpha: 0.5);
     Color border = AppColors.primaryGreen;
-    Color text = AppColors.primaryGreen;
-    IconData icon = Icons.check_circle_rounded;
+    Color statusColor = AppColors.primaryGreen;
+    Color statusBg = AppColors.primaryContainer;
+    IconData statusIcon = Icons.check_circle_rounded;
+    String statusLabel = 'Normal / Open';
+    String statusDesc = 'Dock Operations Active • Regular Intake';
 
-    if (_service.centreStatus == 'Open • Busy') {
-      bg = AppColors.warning.withValues(alpha: 0.12);
+    final status = _service.centreStatus;
+    if (status.contains('Delayed') || status == 'Open • Busy') {
+      bg = AppColors.warningContainer.withValues(alpha: 0.35);
       border = AppColors.warning;
-      text = AppColors.warning;
-      icon = Icons.hourglass_top_rounded;
-    } else if (_service.centreStatus == 'Temporarily Delayed') {
-      bg = AppColors.errorContainer;
+      statusColor = AppColors.warning;
+      statusBg = AppColors.warningContainer;
+      statusIcon = Icons.hourglass_top_rounded;
+      final delay = _service.centreDelayMinutes > 0
+          ? _service.centreDelayMinutes
+          : 15;
+      statusLabel = 'Delayed (+$delay min)';
+      statusDesc = 'Heavy Dock Traffic • Queue Velocity Reduced';
+    } else if (status.contains('Stopped')) {
+      bg = AppColors.errorContainer.withValues(alpha: 0.35);
       border = AppColors.error;
-      text = AppColors.error;
-      icon = Icons.pause_circle_filled_rounded;
+      statusColor = AppColors.error;
+      statusBg = AppColors.errorContainer;
+      statusIcon = Icons.pause_circle_filled_rounded;
+      statusLabel = 'Temporarily Stopped';
+      statusDesc = 'Dock Halted • Inspection or Weather Halt';
     }
 
+    final centreId = widget.centreId ??
+        AuthService.instance.currentCentreId ??
+        '11111111-1111-1111-1111-111111111111';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      key: const Key('officer_centre_status_banner'),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border, width: 1.6),
+        boxShadow: [
+          BoxShadow(
+            color: border.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Top Row: Centre Identity & Operating Status Badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: border.withValues(alpha: 0.4)),
+                ),
+                child: Icon(
+                  Icons.warehouse_rounded,
+                  color: statusColor,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _service.centreName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: Text(
+                            'UUID: ${centreId.length > 8 ? centreId.substring(0, 8) : centreId}...',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Operating Status: ${_service.centreStatus} • Capacity: ${_service.centreCapacityPercent}% (${_service.capacityMode})',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      statusDesc,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: statusColor.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Status Badge with explicit Icon + Text (Tap to Administer Centre)
+              Tooltip(
+                message: 'Manage Centre Status & Operations',
+                child: InkWell(
+                  key: const Key('banner_centre_admin_btn'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OfficerCentreAdminScreen(
+                          officerId: widget.officerId,
+                          centreId: widget.centreId,
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: statusColor),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, color: statusColor, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          statusLabel,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: statusColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.tune_rounded, size: 13, color: statusColor),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Operational Indicators: Load %, Processing Rate, Queue Size, Estimated Wait
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              _buildBannerStatPill(
+                icon: Icons.pie_chart_rounded,
+                label: 'Current Load',
+                value: '${_service.centreCapacityPercent}%',
+                color: _service.centreCapacityPercent > 80
+                    ? AppColors.warning
+                    : AppColors.primaryGreen,
+              ),
+              _buildBannerStatPill(
+                icon: Icons.speed_rounded,
+                label: 'Processing Rate',
+                value: _service.processingRate,
+                color: AppColors.secondary,
+              ),
+              _buildBannerStatPill(
+                icon: Icons.people_alt_rounded,
+                label: 'Queue Size',
+                value: '${_service.waitingCount} in Queue',
+                color: AppColors.warning,
+              ),
+              _buildBannerStatPill(
+                icon: Icons.access_time_rounded,
+                label: 'Estimated Wait',
+                value: _service.averageWait,
+                color: AppColors.textPrimary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Visual Load Bar
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value:
+                        (_service.centreCapacityPercent / 100).clamp(0.0, 1.0),
+                    minHeight: 7,
+                    backgroundColor: Colors.black.withValues(alpha: 0.08),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _service.centreCapacityPercent > 85
+                          ? AppColors.error
+                          : (_service.centreCapacityPercent > 70
+                              ? AppColors.warning
+                              : AppColors.primaryGreen),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${_service.centreCapacityPercent}% (${_service.capacityMode})',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBannerStatPill({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: text, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _service.centreName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  'Operating Status: ${_service.centreStatus} • Capacity: ${_service.centreCapacityPercent}% (${_service.capacityMode})',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: text,
-                  ),
-                ),
-              ],
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 6),
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
             ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionAreasSection({bool isCompact = false}) {
+    final actions = [
+      _ActionItem(
+        key: const Key('action_live_queue'),
+        icon: Icons.groups_rounded,
+        title: 'Live Queue',
+        subtitle: '${_service.waitingCount} Waiting',
+        color: AppColors.secondary,
+        onTap: () {
+          final contextToScroll = _liveQueueKey.currentContext;
+          if (contextToScroll != null) {
+            Scrollable.ensureVisible(
+              contextToScroll,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+            );
+          }
+        },
+      ),
+      _ActionItem(
+        key: const Key('action_qr_checkin'),
+        icon: Icons.qr_code_scanner_rounded,
+        title: 'Gate QR Check-In',
+        subtitle: 'Camera Scanner',
+        color: AppColors.primaryGreen,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const OfficerQrScannerScreen(),
+            ),
+          );
+        },
+      ),
+      _ActionItem(
+        key: const Key('action_procurement'),
+        icon: Icons.scale_rounded,
+        title: 'Procurement',
+        subtitle: 'Produce & Weighment',
+        color: AppColors.primaryDark,
+        onTap: () {
+          final active = _service.queue
+              .where((q) => q.status != 'Completed')
+              .toList();
+          if (active.isNotEmpty) {
+            _openFarmerDetail(active.first.tokenNumber);
+          } else if (_service.queue.isNotEmpty) {
+            _openFarmerDetail(_service.queue.first.tokenNumber);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content:
+                      Text('No active farmers in queue for procurement.')),
+            );
+          }
+        },
+      ),
+      _ActionItem(
+        key: const Key('action_slots'),
+        icon: Icons.calendar_month_rounded,
+        title: 'Slot Management',
+        subtitle: '${_service.slots.length} Windows Active',
+        color: const Color(0xFF5E35B1),
+        onTap: _showSlotManagementModal,
+      ),
+      _ActionItem(
+        key: const Key('action_alerts'),
+        icon: Icons.notification_important_rounded,
+        title: 'Alerts & Exceptions',
+        subtitle: '${_service.openExceptionCount} Active Alerts',
+        color: _service.criticalExceptionCount > 0
+            ? AppColors.error
+            : (_service.openExceptionCount > 0
+                ? AppColors.warning
+                : AppColors.primaryGreen),
+        onTap: () {
+          final openEx = _service.exceptions
+              .where((e) => e.status != ExceptionStatus.resolved)
+              .toList();
+          if (openEx.isNotEmpty) {
+            OfficerExceptionDetailSheet.show(context, exception: openEx.first);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text(
+                      'No active critical exceptions. Centre operating normally.')),
+            );
+          }
+        },
+      ),
+      _ActionItem(
+        key: const Key('action_disputes'),
+        icon: Icons.gavel_rounded,
+        title: 'Disputes',
+        subtitle: '${_service.disputes.where((d) => d.isActive).length} Active',
+        color: const Color(0xFFD84315),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const OfficerDisputeConsoleScreen(),
+            ),
+          );
+        },
+      ),
+      _ActionItem(
+        key: const Key('action_payments'),
+        icon: Icons.payments_rounded,
+        title: 'Payments',
+        subtitle: '${_service.paymentPendingCount} Pending DBT',
+        color: const Color(0xFF00897B),
+        onTap: _showOfficerPaymentsDialog,
+      ),
+      _ActionItem(
+        key: const Key('action_centre_admin'),
+        icon: Icons.tune_rounded,
+        title: 'Centre Admin',
+        subtitle: 'Status & Capacity',
+        color: AppColors.secondary,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OfficerCentreAdminScreen(
+                officerId: widget.officerId,
+                centreId: widget.centreId,
+              ),
+            ),
+          );
+        },
+      ),
+      _ActionItem(
+        key: const Key('action_analytics'),
+        icon: Icons.insights_rounded,
+        title: 'Analytics',
+        subtitle: 'Intake & Velocity',
+        color: const Color(0xFF3949AB),
+        onTap: _showOfficerAnalyticsDialog,
+      ),
+      _ActionItem(
+        key: const Key('action_profile'),
+        icon: Icons.account_circle_rounded,
+        title: 'Officer Profile',
+        subtitle: widget.officerId,
+        color: AppColors.textPrimary,
+        onTap: _showOfficerProfileDialog,
+      ),
+    ];
+
+    return Container(
+      key: const Key('officer_action_areas_section'),
+      padding: EdgeInsets.all(isCompact ? 14 : 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.dashboard_customize_rounded,
+                      size: 18, color: AppColors.secondary),
+                  SizedBox(width: 8),
+                  Text(
+                    'Operations Command Center',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${actions.length} Control Areas',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryGreen,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isCompact ? 10 : 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final crossAxisCount = isCompact
+                  ? 5
+                  : (constraints.maxWidth > 850
+                      ? 5
+                      : (constraints.maxWidth > 500 ? 3 : 2));
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: actions.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: isCompact
+                      ? 2.3
+                      : (constraints.maxWidth > 650 ? 2.2 : 2.0),
+                ),
+                itemBuilder: (context, index) {
+                  final action = actions[index];
+                  return Material(
+                    color: AppColors.surfaceVariant.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      key: action.key,
+                      onTap: action.onTap,
+                      borderRadius: BorderRadius.circular(12),
+                      hoverColor: action.color.withValues(alpha: 0.08),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.cardBorder),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: action.color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(action.icon,
+                                  size: 20, color: action.color),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    action.title,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    action.subtitle,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: action.color,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
@@ -725,6 +2563,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
         tagBg = AppColors.errorContainer;
         icon = Icons.error_rounded;
         break;
+      case ExceptionSeverity.high:
       case ExceptionSeverity.warning:
         cardColor = AppColors.warningContainer.withValues(alpha: 0.25);
         borderColor = AppColors.warning.withValues(alpha: 0.5);
@@ -732,6 +2571,14 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
         tagBg = AppColors.warningContainer;
         icon = Icons.warning_amber_rounded;
         break;
+      case ExceptionSeverity.medium:
+        cardColor = const Color(0xFFFFF8E1).withValues(alpha: 0.5);
+        borderColor = const Color(0xFFFFB300).withValues(alpha: 0.5);
+        tagColor = const Color(0xFFF57F17);
+        tagBg = const Color(0xFFFFF8E1);
+        icon = Icons.info_rounded;
+        break;
+      case ExceptionSeverity.low:
       case ExceptionSeverity.info:
         cardColor = const Color(0xFFE1F5FE).withValues(alpha: 0.4);
         borderColor = const Color(0xFF0277BD).withValues(alpha: 0.4);
@@ -776,7 +2623,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                           Icon(icon, size: 12, color: tagColor),
                           const SizedBox(width: 3),
                           Text(
-                            ex.severityLabel,
+                            ex.severityTag,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
@@ -861,11 +2708,38 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    InkWell(
+                      key: Key('btn_view_ex_${ex.id}'),
+                      onTap: () {
+                        OfficerExceptionDetailSheet.show(context,
+                                exception: ex)
+                            .then((_) {
+                          if (mounted) setState(() {});
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.cardBorder),
+                        ),
+                        child: const Text(
+                          'View',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     if (ex.status == ExceptionStatus.open)
                       InkWell(
-                        onTap: () {
-                          _service.acknowledgeException(ex.id);
-                        },
+                        key: Key('btn_ack_ex_${ex.id}'),
+                        onTap: () => _handleAcknowledgeAlert(ex),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
@@ -885,27 +2759,27 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                         ),
                       ),
                     const SizedBox(width: 6),
-                    InkWell(
-                      onTap: () {
-                        _service.resolveException(ex.id);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'Resolve',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                    if (ex.status != ExceptionStatus.resolved)
+                      InkWell(
+                        key: Key('btn_resolve_ex_${ex.id}'),
+                        onTap: () => _handleResolveAlert(ex),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryGreen,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Resolve',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -1017,6 +2891,52 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildKpiCard(
+                  icon: Icons.payments_rounded,
+                  label: 'Payment Pending',
+                  value: '${_service.paymentPendingCount}',
+                  color: AppColors.warning,
+                  isCompact: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildKpiCard(
+                  icon: Icons.notification_important_rounded,
+                  label: 'Active Alerts',
+                  value: '${_service.openExceptionCount}',
+                  color: _service.openExceptionCount > 0
+                      ? AppColors.error
+                      : AppColors.primaryGreen,
+                  isCompact: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildKpiCard(
+                  icon: Icons.calendar_month_rounded,
+                  label: 'Active Slots',
+                  value: '${_service.slots.length}',
+                  color: AppColors.secondary,
+                  isCompact: true,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildKpiCard(
+                  icon: Icons.people_alt_rounded,
+                  label: 'Queue Size',
+                  value: '${_service.queue.length}',
+                  color: AppColors.textPrimary,
+                  isCompact: true,
+                ),
+              ),
+            ],
+          ),
         ],
       );
     }
@@ -1116,6 +3036,39 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _buildKpiCard(
+                icon: Icons.payments_rounded,
+                label: 'Payment Pending',
+                value: '${_service.paymentPendingCount}',
+                color: AppColors.warning,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildKpiCard(
+                icon: Icons.notification_important_rounded,
+                label: 'Active Alerts',
+                value: '${_service.openExceptionCount}',
+                color: _service.openExceptionCount > 0
+                    ? AppColors.error
+                    : AppColors.primaryGreen,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildKpiCard(
+                icon: Icons.calendar_month_rounded,
+                label: 'Active Slots',
+                value: '${_service.slots.length}',
+                color: AppColors.secondary,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -1200,14 +3153,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                   child: SizedBox(
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OfficerQrScannerScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: _handleScanFarmerQr,
                       icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
                       label: const Text(
                         'Scan Farmer QR',
@@ -1232,7 +3178,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                   child: SizedBox(
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: () => _service.callNextFarmer(),
+                      onPressed: _handleCallNextFarmer,
                       icon: const Icon(Icons.record_voice_over_rounded, size: 20),
                       label: const Text(
                         'Call Next Farmer',
@@ -1259,14 +3205,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
             SizedBox(
               height: 56,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const OfficerQrScannerScreen(),
-                    ),
-                  );
-                },
+                onPressed: _handleScanFarmerQr,
                 icon: const Icon(Icons.qr_code_scanner_rounded, size: 24),
                 label: const Text(
                   'Scan Farmer QR',
@@ -1291,7 +3230,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
             SizedBox(
               height: 56,
               child: ElevatedButton.icon(
-                onPressed: () => _service.callNextFarmer(),
+                onPressed: _handleCallNextFarmer,
                 icon: const Icon(Icons.record_voice_over_rounded, size: 22),
                 label: const Text(
                   'Call Next Farmer',
@@ -1317,15 +3256,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    // Quick mark next booked farmer arrived
-                    final booked = _service.queue
-                        .where((q) => q.status == 'Booked')
-                        .toList();
-                    if (booked.isNotEmpty) {
-                      _service.markArrived(booked.first.tokenNumber);
-                    }
-                  },
+                  onPressed: _handleMarkArrived,
                   icon: const Icon(Icons.how_to_reg_rounded, size: 18),
                   label: const Text('Mark Arrived'),
                   style: OutlinedButton.styleFrom(
@@ -1340,14 +3271,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    final waiting = _service.queue
-                        .where((q) => q.status == 'Waiting')
-                        .toList();
-                    if (waiting.isNotEmpty) {
-                      _service.startProcessing(waiting.first.tokenNumber);
-                    }
-                  },
+                  onPressed: _handleStartProcessing,
                   icon: const Icon(Icons.play_arrow_rounded, size: 18),
                   label: const Text('Start Processing'),
                   style: OutlinedButton.styleFrom(
@@ -1370,6 +3294,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
     final queue = _service.queue;
 
     return Column(
+      key: _liveQueueKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -1408,122 +3333,233 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
-                onTap: () => _openFarmerDetail(farmer.tokenNumber),
+                onTap: () {
+                  _openFarmerDetail(farmer.tokenNumber);
+                },
                 child: Padding(
                   padding: const EdgeInsets.all(14.0),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Token Badge
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: Center(
-                          child: Text(
-                            farmer.tokenNumber.replaceAll('TK-', ''),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.secondary,
+                      Row(
+                        children: [
+                          // Token Badge
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.cardBorder),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Details Column
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  farmer.tokenNumber,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
-                                  ),
+                            child: Center(
+                              child: Text(
+                                farmer.tokenNumber.replaceAll('TK-', ''),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.secondary,
                                 ),
-                                const SizedBox(width: 6),
-                                if (farmer.farmerName == 'Ramesh Kumar')
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryContainer,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Text(
-                                      'FARMER APP',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.primaryGreen,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${farmer.farmerName} • ${farmer.crop} (${farmer.quantity})',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textSecondary,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Details Column
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      farmer.tokenNumber,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    if (farmer.farmerName == 'Ramesh Kumar')
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryContainer,
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'FARMER APP',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.primaryGreen,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
                                 Text(
-                                  farmer.status == 'Booked'
-                                      ? 'Not arrived'
-                                      : '${farmer.peopleAhead} ahead',
+                                  '${farmer.farmerName} • ${farmer.crop} (${farmer.quantity})',
                                   style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
                                     color: AppColors.textSecondary,
                                   ),
                                 ),
-                                const Text(' • '),
-                                Text(
-                                  'Slot: ${farmer.bookedSlot}',
-                                  style: AppTextStyles.caption,
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      farmer.status == 'Booked'
+                                          ? 'Not arrived'
+                                          : '${farmer.peopleAhead} ahead',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const Text(' • '),
+                                    Text(
+                                      'Slot: ${farmer.bookedSlot}',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-
-                      // Status & Action
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _buildQueueStatusPill(farmer.status),
-                          const SizedBox(height: 6),
-                          Text(
-                            farmer.status == 'Completed'
-                                ? 'Done'
-                                : '~${farmer.approxWaitMinutes} min',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textTertiary,
-                            ),
                           ),
+
+                          // Status & Action
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              _buildQueueStatusPill(farmer.status),
+                              const SizedBox(height: 6),
+                              Text(
+                                farmer.status == 'Completed'
+                                    ? 'Done'
+                                    : '~${farmer.approxWaitMinutes} min',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right_rounded,
+                              color: AppColors.textTertiary),
                         ],
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.chevron_right_rounded,
-                          color: AppColors.textTertiary),
+
+                      // Action Button Row for Phase C Procurement
+                      if (farmer.status == 'Waiting' ||
+                          farmer.status == 'Arrived' ||
+                          farmer.status == 'Sampling' ||
+                          farmer.status == 'Quality Check' ||
+                          farmer.status == 'Weighment') ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryGreen,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                            onPressed: () {
+                              _service.startProcurement(farmer.tokenNumber);
+                              _openFarmerDetail(farmer.tokenNumber);
+                            },
+                            icon: const Icon(
+                                Icons.play_circle_filled_rounded,
+                                size: 16),
+                            label: Text(
+                              farmer.status == 'Waiting' ||
+                                      farmer.status == 'Arrived'
+                                  ? 'START PROCUREMENT'
+                                  : 'RESUME PROCUREMENT',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else if (farmer.status == 'Booked') ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded,
+                                size: 13, color: AppColors.textTertiary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Awaiting gate QR check-in before procurement can begin',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textTertiary,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else if (farmer.status == 'Accepted' ||
+                          farmer.status == 'Completed') ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.verified_rounded,
+                                    size: 14, color: AppColors.primaryGreen),
+                                const SizedBox(width: 4),
+                                Text(
+                                  farmer.status == 'Accepted'
+                                      ? 'Procurement Accepted • Payout ${farmer.paymentStatus}'
+                                      : 'Procurement Completed',
+                                  style: const TextStyle(
+                                    color: AppColors.primaryGreen,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  _openFarmerDetail(farmer.tokenNumber),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'VIEW RECEIPT',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1662,6 +3698,128 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               _buildCapacityChoiceChip('High Load', 95),
             ],
           ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+
+          // Daily Capacity & Hourly Processing Rate Controls
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Daily Capacity',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_service.centreCapacity} / day',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          InkWell(
+                            key: const Key('btn_edit_daily_capacity'),
+                            onTap: _handleUpdateDailyCapacity,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'EDIT',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Processing Rate',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_service.configuredProcessingRate} Qtl/hr',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          InkWell(
+                            key: const Key('btn_edit_processing_rate'),
+                            onTap: _handleUpdateProcessingRate,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'EDIT',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1670,6 +3828,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
   Widget _buildStatusChoiceChip(String status) {
     final isSelected = _service.centreStatus == status;
     return ChoiceChip(
+      key: Key('chip_status_${status.replaceAll(' ', '_').replaceAll('•', '')}'),
       label: Text(
         status,
         style: TextStyle(
@@ -1683,9 +3842,11 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
           ? AppColors.error
           : (status == 'Open • Busy'
               ? AppColors.warning
-              : AppColors.primaryGreen),
+              : (status == 'Temporarily Stopped'
+                  ? const Color(0xFFC62828)
+                  : AppColors.primaryGreen)),
       backgroundColor: AppColors.surfaceVariant,
-      onSelected: (_) => _service.setCentreStatus(status),
+      onSelected: (_) => _handleCentreStatusChange(status),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
@@ -1695,6 +3856,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
   Widget _buildCapacityChoiceChip(String mode, int percent) {
     final isSelected = _service.capacityMode == mode;
     return ChoiceChip(
+      key: Key('chip_capacity_$mode'),
       label: Text(
         '$mode ($percent%)',
         style: TextStyle(
@@ -1706,7 +3868,19 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
       selected: isSelected,
       selectedColor: AppColors.secondary,
       backgroundColor: AppColors.surfaceVariant,
-      onSelected: (_) => _service.setCapacityMode(mode),
+      onSelected: (_) {
+        if (!_verifyOfficerAuthorization()) return;
+        _service.setCapacityMode(mode);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Capacity mode set to $mode ($percent%)'),
+            backgroundColor: AppColors.primaryGreen,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        setState(() {});
+      },
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
@@ -1716,7 +3890,27 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
   Widget _buildSlotManagementSection() {
     final slots = _service.slots;
 
+    // Detect overloaded slots and available target slots for recommendation
+    ProcurementSlotInfo? overloadedSlot;
+    ProcurementSlotInfo? targetAvailableSlot;
+    for (final s in slots) {
+      if (s.isOverloaded && overloadedSlot == null) {
+        overloadedSlot = s;
+      } else if (overloadedSlot != null &&
+          s.availableCapacity >= 2 &&
+          targetAvailableSlot == null) {
+        targetAvailableSlot = s;
+      }
+    }
+    final systemRecommendation = (overloadedSlot != null &&
+            targetAvailableSlot != null)
+        ? 'Move 2 eligible bookings from ${overloadedSlot.time} → ${targetAvailableSlot.time}.'
+        : (overloadedSlot != null
+            ? 'Move 2 eligible bookings from ${overloadedSlot.time} to upcoming afternoon windows.'
+            : null);
+
     return Container(
+      key: const Key('officer_slot_management_section'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -1729,55 +3923,150 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Today's Slots",
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+              Flexible(
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 18, color: AppColors.primaryGreen),
+                    const SizedBox(width: 8),
+                    const Flexible(
+                      child: Text(
+                        'Smart Slot Management',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${slots.length} Active Windows',
                 style: AppTextStyles.caption,
               ),
             ],
           ),
+          if (systemRecommendation != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFB74D)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_awesome_rounded,
+                      size: 16, color: Color(0xFFE65100)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'System Recommendation: $systemRecommendation',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFBF360C),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Column(
             children: slots.map((slot) {
+              final isOverloaded = slot.isOverloaded;
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
+                  color: isOverloaded
+                      ? const Color(0xFFFFEBEE)
+                      : AppColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.cardBorder),
+                  border: Border.all(
+                    color: isOverloaded
+                        ? const Color(0xFFEF9A9A)
+                        : AppColors.cardBorder,
+                    width: isOverloaded ? 1.4 : 1.0,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.access_time_filled_rounded,
-                        size: 18, color: AppColors.secondary),
+                    Icon(
+                      isOverloaded
+                          ? Icons.warning_rounded
+                          : Icons.access_time_filled_rounded,
+                      size: 18,
+                      color: isOverloaded
+                          ? AppColors.error
+                          : AppColors.secondary,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            slot.time,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  slot.time,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: isOverloaded
+                                        ? AppColors.error
+                                        : AppColors.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isOverloaded
+                                      ? const Color(0xFFFFCDD2)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: isOverloaded
+                                        ? const Color(0xFFE57373)
+                                        : AppColors.cardBorder,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${slot.bookingsCount}/${slot.capacity}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isOverloaded
+                                        ? AppColors.error
+                                        : AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 3),
                           Text(
-                            '${slot.bookingsCount} bookings • Capacity: ${slot.capacity} • Tag: ${slot.recommendationTag}',
-                            style: const TextStyle(
+                            '${slot.availableCapacity} available • Arrivals: ${slot.expectedArrivals} • Status: ${slot.recommendationTag}',
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.textSecondary,
+                              color: isOverloaded
+                                  ? const Color(0xFFC62828)
+                                  : AppColors.textSecondary,
                             ),
                           ),
                         ],
@@ -2086,7 +4375,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    rec.reasonEn,
+                    'Reason: ${rec.reasonEn}',
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -2097,9 +4386,37 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 6),
+
+          // Expected Impact Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFA5D6A7)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.trending_down_rounded,
+                    size: 14, color: AppColors.primaryGreen),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Expected impact: ${rec.displayExpectedImpact}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 10),
 
-          // Action buttons
+          // Action buttons: [ APPROVE ] and [ REJECT ]
           if (rec.isPending)
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -2110,6 +4427,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                     SlotReallocationService().dismissRecommendation(rec.id);
                   },
                   style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
                     minimumSize: Size.zero,
@@ -2119,8 +4437,8 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                     ),
                   ),
                   child: const Text(
-                    'Dismiss',
-                    style: TextStyle(fontSize: 11),
+                    'REJECT',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -2128,7 +4446,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                   key: Key('btn_confirm_realloc_${rec.tokenNumber}'),
                   icon: const Icon(Icons.check_rounded, size: 14),
                   label: const Text(
-                    'Confirm Reallocation',
+                    'APPROVE',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () {
@@ -2268,6 +4586,55 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          // Comparison with Current Centre
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFECEFF1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFCFD8DC)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on_rounded,
+                          size: 16, color: Color(0xFF37474F)),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'CURRENT CENTRE: ${_service.centreName}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF263238),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Load: ${_service.centreCapacityPercent}% • Wait: ${_service.averageWait}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF455A64),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -2390,6 +4757,16 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               Text('•',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
               Text(
+                'Status: ${rec.operatingStatus}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+              Text('•',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+              Text(
                 'Next: ${rec.nextAvailableSlot}',
                 style: const TextStyle(
                   fontSize: 11,
@@ -2398,6 +4775,15 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Why recommended: ${rec.reasonEn}',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -2410,6 +4796,14 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
         summary.peakCongestionLevel == CapacityCongestionLevel.critical;
     final isHigh =
         summary.peakCongestionLevel == CapacityCongestionLevel.highRisk;
+    final availableCap =
+        (100 - _service.centreCapacityPercent).clamp(0, 100);
+    final arrivalsCount = _service.queue
+            .where((q) => q.checkInStatus == 'Checked In')
+            .length +
+        _service.completedTodayCount;
+    final next1h = summary.forecasts.isNotEmpty ? summary.forecasts[0] : null;
+    final next2h = summary.forecasts.length > 1 ? summary.forecasts[1] : null;
 
     return Container(
       key: const Key('officer_capacity_forecast_section'),
@@ -2448,7 +4842,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  Icons.insights_rounded,
+                  summary.peakCongestionLevel.icon,
                   color: summary.peakCongestionLevel.color,
                   size: 22,
                 ),
@@ -2459,7 +4853,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Capacity Forecast & Risk',
+                      'Congestion Intelligence & Capacity Forecast',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -2467,10 +4861,11 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                       ),
                     ),
                     Text(
-                      'Current Load: ${_service.centreCapacityPercent}% • Peak Risk: ${summary.peakRiskTime}',
+                      CapacityForecastModel.operationalForecastLabel,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
@@ -2487,16 +4882,104 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                     width: 1.2,
                   ),
                 ),
-                child: Text(
-                  summary.peakCongestionLevel.nameEn.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: summary.peakCongestionLevel.color,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(summary.peakCongestionLevel.icon,
+                        size: 14, color: summary.peakCongestionLevel.color),
+                    const SizedBox(width: 4),
+                    Text(
+                      summary.peakCongestionLevel.displayTag,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: summary.peakCongestionLevel.color,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Current Operational Parameters Grid
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.cardBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.dashboard_customize_rounded,
+                        size: 14, color: AppColors.secondary),
+                    SizedBox(width: 6),
+                    Text(
+                      'CURRENT OPERATIONAL PARAMETERS',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 10,
+                  children: [
+                    _buildParamPill('Queue Size', '${_service.queue.length}'),
+                    _buildParamPill(
+                        'People Waiting', '${_service.waitingCount}'),
+                    _buildParamPill('Current Load',
+                        '${_service.centreCapacityPercent}%'),
+                    _buildParamPill('Available Capacity', '$availableCap%'),
+                    _buildParamPill('Processing Rate',
+                        '${_service.processingRatePerHour}/hr'),
+                    _buildParamPill('Average Wait', _service.averageWait),
+                    _buildParamPill('Delay Minutes',
+                        '${_service.centreDelayMinutes}m'),
+                    _buildParamPill('Arrivals Today', '$arrivalsCount'),
+                  ],
+                ),
+                const Divider(height: 18, thickness: 0.8),
+                // Quick Multi-Horizon Overview
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'FORECAST LOAD: Now ${_service.centreCapacityPercent}%  •  +1h ${next1h?.predictedLoadPercent ?? _service.centreCapacityPercent}% (${next1h?.congestionLevel.displayTag ?? "LOW"})  •  +2h ${next2h?.predictedLoadPercent ?? _service.centreCapacityPercent}% (${next2h?.congestionLevel.displayTag ?? "LOW"})',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Risk: ${summary.peakCongestionLevel.nameEn.toUpperCase()}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: summary.peakCongestionLevel.color,
+                      ),
+                    ),
+                  ],
+                ),
+
+              ],
+            ),
           ),
 
           const SizedBox(height: 14),
@@ -2537,7 +5020,7 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Recommended Officer Interventions',
+                      'Recommended Action',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -2563,10 +5046,36 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
     );
   }
 
+  Widget _buildParamPill(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildForecastTimelineCard(CapacityForecastModel f) {
     return Container(
       key: Key('card_forecast_${f.window.name}'),
-      width: 195,
+      width: 215,
       margin: const EdgeInsets.only(right: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -2598,13 +5107,13 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               const SizedBox(width: 4),
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: f.congestionLevel.color,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  f.congestionLevel.nameEn,
+                  f.congestionLevel.displayTag,
                   style: const TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
@@ -2629,7 +5138,14 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Load', style: TextStyle(fontSize: 11)),
+              const Flexible(
+                child: Text(
+                  'Forecast Load',
+                  style: TextStyle(fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
               Text(
                 '${f.predictedLoadPercent}%',
                 style: TextStyle(
@@ -2674,6 +5190,19 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
             ],
           ),
           const SizedBox(height: 6),
+          // Deterministic Operational Reason
+          Text(
+            'Reason: ${f.displayReason}',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              height: 1.2,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
           Text(
             f.confidenceBasis,
             style: TextStyle(
@@ -2681,11 +5210,29 @@ class _OfficerDashboardScreenState extends State<OfficerDashboardScreen> {
               color: Colors.grey.shade700,
               height: 1.2,
             ),
-            maxLines: 3,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
+}
+
+class _ActionItem {
+  final Key key;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionItem({
+    required this.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
 }

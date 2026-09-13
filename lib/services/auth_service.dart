@@ -68,9 +68,38 @@ class AuthService {
   String? get currentOfficerId => _currentOfficerId;
   String? get currentCentreId => _currentCentreId;
   UserRole? get currentRole => _currentRole;
+  bool get isOfficer => _currentRole == UserRole.officer;
+  bool get isFarmer => _currentRole == UserRole.farmer;
+  bool get isDemoMode => SupabaseConfig.backendMode == BackendMode.local;
 
   bool get isAuthenticated =>
       _currentUserId != null || _currentOfficerId != null;
+
+  /// Sets officer session directly for testing or demo role selection.
+  void setOfficerSession({required String officerId, required String centreId}) {
+    _currentOfficerId = officerId;
+    _currentCentreId = centreId;
+    _currentRole = UserRole.officer;
+    _currentUserId = null;
+    _currentPhone = null;
+  }
+
+  /// Sets demo role for testing.
+  void setDemoRole(String role, {String? officerId, String? centreId}) {
+    if (role.toLowerCase() == 'officer') {
+      _currentRole = UserRole.officer;
+      _currentOfficerId = officerId ?? 'OFFICER001';
+      _currentCentreId = centreId ?? '11111111-1111-1111-1111-111111111111';
+      _currentUserId = null;
+      _currentPhone = null;
+    } else {
+      _currentRole = UserRole.farmer;
+      _currentUserId = '22222222-2222-2222-2222-222222222222';
+      _currentPhone = '9876543210';
+      _currentOfficerId = null;
+      _currentCentreId = null;
+    }
+  }
 
   void _initializeAuthListener() {
     if (SupabaseConfig.shouldUseSupabase && SupabaseService.instance.isReady) {

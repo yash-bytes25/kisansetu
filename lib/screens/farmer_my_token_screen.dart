@@ -34,7 +34,6 @@ class _FarmerMyTokenScreenState extends State<FarmerMyTokenScreen> {
   bool get _isTelugu => widget.isTelugu;
 
   late FarmerDashboardData _currentData;
-  late String _currentStatus;
 
   final _stateService = ProcurementStateService();
 
@@ -42,7 +41,6 @@ class _FarmerMyTokenScreenState extends State<FarmerMyTokenScreen> {
   void initState() {
     super.initState();
     _currentData = _stateService.farmerData;
-    _currentStatus = _currentData.centreStatus;
     _stateService.addListener(_onStateUpdated);
   }
 
@@ -56,7 +54,6 @@ class _FarmerMyTokenScreenState extends State<FarmerMyTokenScreen> {
     if (mounted) {
       setState(() {
         _currentData = _stateService.farmerData;
-        _currentStatus = _currentData.centreStatus;
       });
     }
   }
@@ -109,37 +106,7 @@ class _FarmerMyTokenScreenState extends State<FarmerMyTokenScreen> {
     );
   }
 
-  /// Triggers the next queue progression step.
-  void _simulateQueueUpdate() {
-    _stateService.simulateNextQueueStep();
-    final nextAhead = _stateService.farmerData.peopleAhead;
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.primaryGreen,
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        content: Text(
-          _isTelugu
-              ? 'క్యూ అప్‌డేట్: ఇప్పుడు $nextAhead మంది ముందున్నారు (ప్రతీక్ష: ${_currentData.expectedWaitMinutes} నిమిషాలు)'
-              : (_isHindi
-                  ? 'कतार अपडेट: अब $nextAhead लोग आगे हैं (प्रतीक्षा: ${_currentData.expectedWaitMinutes} मिनट)'
-                  : 'Queue Updated: $nextAhead people ahead now (Wait: ${_currentData.expectedWaitMinutes} min)'),
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
-  }
-
-  /// Updates the centre operating status.
-  void _onStatusChanged(String newStatus) {
-    if (_currentStatus == newStatus) return;
-    _stateService.setCentreStatus(newStatus);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -294,8 +261,8 @@ class _FarmerMyTokenScreenState extends State<FarmerMyTokenScreen> {
                 _buildQueueVisualCard(),
                 const SizedBox(height: 20),
 
-                // 3. Demo / Prototype Simulation Controls Card
-                _buildSimulationControlsCard(),
+                // 3. Real Farmer-Facing Live Queue Status Card
+                _buildLiveQueueStatusCard(),
                 const SizedBox(height: 24),
 
                 // 4. Back to Dashboard Action Button (>= 56dp)
@@ -809,137 +776,288 @@ class _FarmerMyTokenScreenState extends State<FarmerMyTokenScreen> {
     );
   }
 
-  Widget _buildSimulationControlsCard() {
+  Widget _buildLiveQueueStatusCard() {
+    final ahead = _currentData.peopleAhead;
+    final wait = _currentData.expectedWaitMinutes;
+    final status = _currentData.centreStatus;
+
+    Color statusColor;
+    String statusDisplay;
+
+    if (status.contains('Busy')) {
+      statusColor = AppColors.warning;
+      statusDisplay = _isTelugu
+          ? '🟡 కేంద్రం రద్దీగా ఉంది — అధిక రద్దీ'
+          : (_isHindi
+              ? '🟡 केंद्र व्यस्त है — उच्च मात्रा'
+              : '🟡 Centre is busy — high volume');
+    } else if (status.contains('Delayed')) {
+      statusColor = AppColors.error;
+      statusDisplay = _isTelugu
+          ? '🔴 కేంద్రం తాత్కాలికంగా ఆలస్యమైంది'
+          : (_isHindi
+              ? '🔴 केंद्र अस्थायी रूप से विलंबित है'
+              : '🔴 Centre is temporarily delayed');
+    } else if (status.contains('Stopped') || status.contains('Closed')) {
+      statusColor = AppColors.error;
+      statusDisplay = _isTelugu
+          ? '🔴 కేంద్రం తాత్కాలికంగా నిలిపివేయబడింది'
+          : (_isHindi
+              ? '🔴 केंद्र अस्थायी रूप से रुका हुआ है'
+              : '🔴 Centre is temporarily stopped');
+    } else {
+      statusColor = AppColors.primaryGreen;
+      statusDisplay = _isTelugu
+          ? '🟢 కేంద్రం సాధారణంగా పనిచేస్తోంది'
+          : (_isHindi
+              ? '🟢 केंद्र सामान्य रूप से संचालित हो रहा है'
+              : '🟢 Centre is operating normally');
+    }
+
+    final peopleAheadText = ahead == 0
+        ? (_isTelugu
+            ? '0 మంది ముందున్నారు'
+            : (_isHindi ? '0 लोग आगे हैं' : '0 people ahead'))
+        : (_isTelugu
+            ? '$ahead మంది ముందున్నారు'
+            : (_isHindi ? '$ahead लोग आगे हैं' : '$ahead people ahead'));
+
+    final waitText = _isTelugu
+        ? 'అంచనా వేచి ఉండే సమయం: $wait నిమి'
+        : (_isHindi
+            ? 'अनुमानित प्रतीक्षा: $wait मिनट'
+            : 'Estimated wait: $wait min');
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorder, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header Row: Section Title & Live Tag
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: AppColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'PROTOTYPE DEMO',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primaryGreen,
-                    letterSpacing: 0.5,
-                  ),
+                child: const Icon(
+                  Icons.sensors_rounded,
+                  color: AppColors.primaryGreen,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   _isTelugu
-                      ? 'లైవ్ క్యూ సిమ్యులేషన్'
-                      : (_isHindi
-                          ? 'लाइव कतार सिमुलेशन'
-                          : 'Live Queue Simulation'),
+                      ? 'లైవ్ క్యూ స్థితి'
+                      : (_isHindi ? 'लाइव कतार स्थिति' : 'Live Queue Status'),
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
                 ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryGreen,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      _isTelugu ? 'లైవ్' : (_isHindi ? 'लाइव' : 'LIVE'),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryGreen,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            _isTelugu
-                ? 'సేకరణ కేంద్రంలో క్యూ పురోగతి (7 → 5 → 3 → 1 → 0) అనుకరించడానికి క్రింద నొక్కండి.'
-                : (_isHindi
-                    ? 'खरीद केंद्र पर कतार प्रगति (7 → 5 → 3 → 1 → 0) का अनुकरण करने के लिए नीचे टैप करें।'
-                    : 'Tap to simulate live intake progress (7 → 5 → 3 → 1 → 0) at the procurement dock.'),
-            style: AppTextStyles.caption,
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // Primary Simulation Button (>= 56dp height)
-          ElevatedButton.icon(
-            onPressed: _simulateQueueUpdate,
-            icon: const Icon(Icons.fast_forward_rounded, size: 22),
-            label: Text(
-              _isTelugu
-                  ? 'క్యూ అప్‌డేట్‌ను అనుకరించండి'
-                  : (_isHindi
-                      ? 'कतार अपडेट अनुकरण करें'
-                      : 'Simulate Queue Update'),
-              style: const TextStyle(
-                fontSize: 16,
+          // Centre Operating Status Banner
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+            ),
+            child: Text(
+              statusDisplay,
+              style: TextStyle(
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                color: statusColor,
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // Status switcher
-          Text(
-            _isTelugu
-                ? 'కేంద్ర స్థితిని మార్చండి:'
-                : (_isHindi ? 'केंद्र स्थिति बदलें:' : 'Simulate Centre Status:'),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
+          // Queue Position & Waiting Time Metrics
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.cardBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.people_outline_rounded,
+                      size: 20,
+                      color: AppColors.primaryGreen,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      peopleAheadText,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    if (ahead == 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          _isTelugu
+                              ? 'ఇప్పుడు మీ వంతు!'
+                              : (_isHindi ? 'आपकी बारी!' : 'Your Turn!'),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.schedule_rounded,
+                      size: 20,
+                      color: AppColors.primaryGreen,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      waitText,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              _buildStatusChip('Open • Normal'),
-              _buildStatusChip('Open • Busy'),
-              _buildStatusChip('Temporarily Delayed'),
-            ],
+          const SizedBox(height: 12),
+
+          // Real-time synchronization note
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _isTelugu
+                          ? 'చివరి నవీకరణ: ఇప్పుడే'
+                          : (_isHindi ? 'अंतिम अपडेट: अभी' : 'Last updated: Just now'),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _isTelugu
+                      ? 'రైతుల సేకరణ ప్రక్రియ జరిగే కొద్దీ క్యూ స్వయంచాలకంగా అప్‌డేట్ అవుతుంది.'
+                      : (_isHindi
+                          ? 'किसानों की खरीद आगे बढ़ने के साथ कतार स्वतः अपडेट होती है।'
+                          : 'Queue updates automatically as farmers are processed.'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _isTelugu
+                      ? 'సేకరణ పురోగతితో మీ క్యూ స్వయంచాలకంగా అప్‌డేట్ అవుతుంది.'
+                      : (_isHindi
+                          ? 'खरीद प्रगति के साथ आपकी कतार स्वतः अपडेट होती है।'
+                          : 'Your queue is automatically updated as procurement progresses.'),
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(String status) {
-    final isSelected = _currentStatus == status;
-    return ChoiceChip(
-      label: Text(
-        status,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-          color: isSelected ? Colors.white : AppColors.textPrimary,
-        ),
-      ),
-      selected: isSelected,
-      selectedColor: status == 'Temporarily Delayed'
-          ? AppColors.error
-          : (status == 'Open • Busy' ? AppColors.warning : AppColors.primaryGreen),
-      backgroundColor: AppColors.surface,
-      onSelected: (_) => _onStatusChanged(status),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: isSelected ? Colors.transparent : AppColors.cardBorder,
-        ),
       ),
     );
   }

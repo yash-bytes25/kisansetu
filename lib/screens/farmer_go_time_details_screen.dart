@@ -5,6 +5,7 @@ import '../services/queue_prediction_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'farmer_alternative_centres_screen.dart';
+import '../services/auth_service.dart';
 
 /// Flagship decision-support screen detailing "When Should I Go?".
 ///
@@ -399,46 +400,49 @@ class _FarmerGoTimeDetailsScreenState extends State<FarmerGoTimeDetailsScreen> {
 
               const SizedBox(height: 20),
 
-              // 4. Queue Simulation Quick Action Button (>= 56dp)
-              SizedBox(
-                height: 56,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryDark,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    _stateService.simulateNextQueueStep();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          _isTelugu
-                              ? 'క్యూ అప్‌డేట్ చేయబడింది: ${_stateService.farmerData.peopleAhead} మంది ముందున్నారు'
-                              : (_isHindi
-                                  ? 'कतार अपडेट हुई: ${_stateService.farmerData.peopleAhead} लोग आगे हैं'
-                                  : 'Queue advanced: ${_stateService.farmerData.peopleAhead} people ahead'),
-                        ),
-                        duration: const Duration(seconds: 2),
+              // 4. Queue Simulation Action (Strictly restricted to Officer in Demo Mode)
+              if (AuthService.instance.isOfficer && AuthService.instance.isDemoMode) ...[
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryDark,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.fast_forward_rounded, size: 22),
-                  label: Text(
-                    _isTelugu
-                        ? 'సిమ్యులేట్ క్యూ మార్పు (${data.peopleAhead} ముందు)'
-                        : (_isHindi
-                            ? 'कतार परिवर्तन सिमुलेट करें (${data.peopleAhead} आगे)'
-                            : 'Simulate Queue Step (${data.peopleAhead} ahead)'),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                    ),
+                    onPressed: () {
+                      _stateService.simulateNextQueueStep();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            _isTelugu
+                                ? 'క్యూ అప్‌డేట్ చేయబడింది: ${_stateService.farmerData.peopleAhead} మంది ముందున్నారు'
+                                : (_isHindi
+                                    ? 'कतार अपडेट हुई: ${_stateService.farmerData.peopleAhead} लोग आगे हैं'
+                                    : 'Queue advanced: ${_stateService.farmerData.peopleAhead} people ahead'),
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.fast_forward_rounded, size: 22),
+                    label: Text(
+                      _isTelugu
+                          ? 'సిమ్యులేట్ క్యూ మార్పు (${data.peopleAhead} ముందు)'
+                          : (_isHindi
+                              ? 'कतार परिवर्तन सिमुलेट करें (${data.peopleAhead} आगे)'
+                              : 'Simulate Queue Step (${data.peopleAhead} ahead)'),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 12),
+              ],
               if (data.recommendation == GoTimeRecommendation.delay ||
                   data.recommendation ==
                       GoTimeRecommendation.centreTemporarilyStopped ||

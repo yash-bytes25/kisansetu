@@ -11,7 +11,9 @@ import '../models/offline_essential_info_model.dart';
 import '../models/procurement_centre.dart';
 import '../models/procurement_slot_info.dart';
 import '../models/slot_reallocation_model.dart';
+import '../models/weighment_audit_entry.dart';
 import 'alternative_centre_service.dart';
+import 'auth_service.dart';
 import 'capacity_forecast_service.dart';
 import 'connectivity_service.dart';
 import 'notification_service.dart';
@@ -19,6 +21,8 @@ import 'offline_essential_info_service.dart';
 import 'officer_exception_service.dart';
 import 'payment_calculation_service.dart';
 import 'queue_prediction_service.dart';
+import 'repositories/booking_repository.dart';
+import 'repositories/payment_repository.dart';
 import 'repositories/repository_provider.dart';
 import 'slot_reallocation_service.dart';
 import 'smart_slot_service.dart';
@@ -32,6 +36,7 @@ class ProcurementStateService extends ChangeNotifier {
   static final ProcurementStateService _instance =
       ProcurementStateService._internal();
   factory ProcurementStateService() => _instance;
+  static ProcurementStateService get instance => _instance;
   ProcurementStateService._internal() {
     reset();
     AppConnectivityService.instance.onConnectivityChanged.listen((isOnline) {
@@ -62,10 +67,46 @@ class ProcurementStateService extends ChangeNotifier {
   List<ProcurementSlotInfo> _slots = [];
 
   // Farmer's own state (Ramesh Kumar)
+  String _farmerName = 'Ramesh Kumar';
+  String get farmerName => _farmerName;
   late FarmerDashboardData _farmerData;
+
+  // Farmer KYC & Location Details
+  String _farmerState = 'Punjab';
+  String _farmerDistrict = 'Ludhiana';
+  String _farmerVillage = 'Khanna Kalan';
+  String _aadhaarMasked = 'XXXX-XXXX-8492';
+  bool _isAadhaarVerified = true;
+
+  // Farmer MSP DBT Bank Account Details
+  String _bankName = 'State Bank of India (SBI)';
+  String _accountNumber = '5010043214321';
+  String _ifscCode = 'SBIN0001234';
+  String _dbtStatus = 'Aadhaar-Linked Active';
+
+  String get farmerState => _farmerState;
+  String get farmerDistrict => _farmerDistrict;
+  String get farmerVillage => _farmerVillage;
+  String get aadhaarMasked => _aadhaarMasked;
+  bool get isAadhaarVerified => _isAadhaarVerified;
+
+  String get bankName => _bankName;
+  String get bankAccountNumber => _accountNumber;
+  String get accountNumber => _accountNumber;
+  String get bankAccountNumberMasked =>
+      'A/C ending in **${_accountNumber.length >= 4 ? _accountNumber.substring(_accountNumber.length - 4) : _accountNumber}';
+  String get ifscCode => _ifscCode;
+  String get dbtStatus => _dbtStatus;
 
   // Disputes & Grievances
   final List<FarmerDisputeReport> _disputes = [];
+
+  // Phase E: Weighment Audit Trail
+  final List<WeighmentAuditEntry> _weighmentAudits = [];
+
+  // Phase E: Centre Configuration & Throughput
+  int _centreCapacity = 100;
+  int _centreProcessingRatePerHour = 15;
 
   // Phase 13 Queue Intelligence attributes
   int _centreDelayMinutes = 0;
@@ -78,6 +119,8 @@ class ProcurementStateService extends ChangeNotifier {
   String get centreName => _centreName;
   String get centreStatus => _centreStatus;
   int get centreCapacityPercent => _centreCapacityPercent;
+  int get centreCapacity => _centreCapacity;
+  int get configuredProcessingRate => _centreProcessingRatePerHour;
   String get capacityMode => _capacityMode;
   int get centreDelayMinutes => _centreDelayMinutes;
   int get averageProcessingMinutes => _averageProcessingMinutes;
@@ -86,13 +129,37 @@ class ProcurementStateService extends ChangeNotifier {
   int get arrivedCount => _arrivedCount;
   int get waitingCount => _waitingCount;
   int get completedCount => _completedCount;
+
+  /// Alias for completedCount used by the Phase D dashboard.
+  int get completedTodayCount => _completedCount;
+
+  /// Derived processing rate: farmers processed per hour based on average
+  /// processing minutes per farmer (60 / averageProcessingMinutes).
+  double get processingRatePerHour =>
+      _averageProcessingMinutes > 0 ? 60.0 / _averageProcessingMinutes : 12.0;
+
+  /// Explicit processing rate configured for Phase E centre operations and administration
+  double get centreProcessingRatePerHour =>
+      _centreProcessingRatePerHour.toDouble();
+
   String get averageWait => _averageWait;
   String get processingRate => _processingRate;
+  int get paymentPendingCount =>
+      _queue.where((q) => q.paymentStatus == 'Pending').length;
 
   List<OfficerQueueItem> get queue => List.unmodifiable(_queue);
   List<ProcurementSlotInfo> get slots => List.unmodifiable(_slots);
   FarmerDashboardData get farmerData => _farmerData;
   List<FarmerDisputeReport> get disputes => List.unmodifiable(_disputes);
+  List<WeighmentAuditEntry> get weighmentAudits =>
+      List.unmodifiable(_weighmentAudits);
+
+  List<WeighmentAuditEntry> getWeighmentAuditsForToken(String tokenNumber) {
+    final list =
+        _weighmentAudits.where((a) => a.tokenNumber == tokenNumber).toList();
+    list.sort((a, b) => b.changedAt.compareTo(a.changedAt));
+    return list;
+  }
 
   OfficerExceptionService get exceptionService => _exceptionService;
   List<OfficerExceptionModel> get exceptions =>
@@ -171,11 +238,43 @@ class ProcurementStateService extends ChangeNotifier {
     _centreDelayMinutes = 0;
     _averageProcessingMinutes = 5;
     _farmerTravelTimeMinutes = 25;
+    _farmerName = 'Ramesh Kumar';
+    _centreCapacity = 100;
+    _centreProcessingRatePerHour = 15;
+
+    _weighmentAudits.clear();
+    _weighmentAudits.addAll([
+      WeighmentAuditEntry(
+        id: 'AUD-8492',
+        tokenNumber: 'TK-8492',
+        farmerName: 'Ramesh Kumar',
+        crop: 'Wheat',
+        originalWeight: 50.0,
+        updatedWeight: 47.8,
+        changedBy: 'OFF-101',
+        changedAt: DateTime.now().subtract(const Duration(hours: 2)),
+        reason: 'Scale calibration check - dock 2',
+      ),
+      WeighmentAuditEntry(
+        id: 'AUD-8493',
+        tokenNumber: 'TK-8493',
+        farmerName: 'Suresh Patel',
+        crop: 'Mustard',
+        originalWeight: 30.0,
+        updatedWeight: 30.2,
+        changedBy: 'OFF-101',
+        changedAt: DateTime.now().subtract(const Duration(hours: 4)),
+        reason: 'Bag tare weight compensation',
+      ),
+    ]);
 
     _disputes.clear();
+
     NotificationService().reset();
     _exceptionService.reset();
     SlotReallocationService().reset();
+    LocalBookingRepository.reset();
+    LocalPaymentRepository.reset();
 
     _slots = [
       const ProcurementSlotInfo(
@@ -283,6 +382,16 @@ class ProcurementStateService extends ChangeNotifier {
       ),
     ];
 
+    _farmerState = 'Punjab';
+    _farmerDistrict = 'Ludhiana';
+    _farmerVillage = 'Khanna Kalan';
+    _aadhaarMasked = 'XXXX-XXXX-8492';
+    _isAadhaarVerified = true;
+    _bankName = 'State Bank of India (SBI)';
+    _accountNumber = '5010043214321';
+    _ifscCode = 'SBIN0001234';
+    _dbtStatus = 'Aadhaar-Linked Active';
+
     _recalculateFarmerData();
     notifyListeners();
   }
@@ -341,7 +450,7 @@ class ProcurementStateService extends ChangeNotifier {
     );
 
     _farmerData = FarmerDashboardData(
-      farmerName: 'Ramesh Kumar',
+      farmerName: _farmerName,
       cropName: crop,
       quantity: quantity,
       centreName: _centreName,
@@ -477,8 +586,10 @@ class ProcurementStateService extends ChangeNotifier {
     );
 
     // Persist crop selection to repository (Supabase in cloud mode / local in-memory)
+    final activeFarmerId = AuthService.instance.currentUserId ??
+        '22222222-2222-2222-2222-222222222222';
     RepositoryProvider.farmer.saveFarmerProduce(
-      farmerId: '22222222-2222-2222-2222-222222222222',
+      farmerId: activeFarmerId,
       crop: crop.cropName,
       quantity: quantityQuintals,
     );
@@ -499,6 +610,37 @@ class ProcurementStateService extends ChangeNotifier {
       _recalculateFarmerData();
       notifyListeners();
     }
+  }
+
+  /// Updates farmer's registered name in state.
+  void updateFarmerName(String newName) {
+    _farmerName = newName;
+    _recalculateFarmerData();
+    notifyListeners();
+  }
+
+  /// Updates farmer's KYC location details in state.
+  void updateKycDetails({
+    required String state,
+    required String district,
+    required String village,
+  }) {
+    _farmerState = state;
+    _farmerDistrict = district;
+    _farmerVillage = village;
+    notifyListeners();
+  }
+
+  /// Updates farmer's MSP DBT bank details in state.
+  void updateBankDetails({
+    required String bankName,
+    required String accountNumber,
+    required String ifscCode,
+  }) {
+    _bankName = bankName;
+    _accountNumber = accountNumber;
+    _ifscCode = ifscCode;
+    notifyListeners();
   }
 
   /// Steps to next discrete queue simulation step [7, 5, 3, 1, 0].
@@ -762,16 +904,93 @@ class ProcurementStateService extends ChangeNotifier {
 
   /// Officer action: Start Processing / Advance to Quality Check
   void startProcessing(String tokenNumber) {
+    startProcurement(tokenNumber);
+  }
+
+  /// Phase C: Starts procurement processing for an eligible checked-in farmer.
+  /// Validates that the farmer is checked in or in an active waiting/sampling state.
+  /// Rejects unarrived (Booked) or terminal (Completed, Cancelled) states.
+  bool startProcurement(String tokenNumber) {
     final index = _queue.indexWhere((q) => q.tokenNumber == tokenNumber);
     if (index != -1) {
-      _queue[index] = _queue[index].copyWith(status: 'Quality Check');
+      final item = _queue[index];
+      // Must be checked in or arrived
+      if (item.status == 'Booked' && item.checkInStatus != 'Checked In') {
+        return false;
+      }
+      if (item.status == 'Completed' ||
+          item.status == 'Cancelled' ||
+          item.status == 'Expired') {
+        return false;
+      }
+
+      _queue[index] = item.copyWith(
+        status: item.status == 'Waiting' || item.status == 'Arrived'
+            ? 'Quality Check'
+            : item.status,
+      );
       _recalculateFarmerData();
+      RepositoryProvider.booking.updateBookingStatus(
+        tokenNumber,
+        BookingLifecycleStatus.processing,
+      );
+      notifyListeners();
+      return true;
+    } else if (tokenNumber == _farmerData.tokenNumber) {
+      if (_farmerData.lifecycleStatus == 'Booked' &&
+          _farmerData.checkInStatus != 'Checked In') {
+        return false;
+      }
+      if (_farmerData.lifecycleStatus == 'Completed' ||
+          _farmerData.lifecycleStatus == 'Cancelled') {
+        return false;
+      }
+      _farmerData = _farmerData.copyWith(
+        lifecycleStatus: _farmerData.lifecycleStatus == 'Waiting' ||
+                _farmerData.lifecycleStatus == 'Arrived'
+            ? 'Quality Check'
+            : _farmerData.lifecycleStatus,
+      );
+      RepositoryProvider.booking.updateBookingStatus(
+        tokenNumber,
+        BookingLifecycleStatus.processing,
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  /// Phase C: Holds an active procurement and returns farmer to 'Waiting' in the live queue.
+  void holdOrReturnToQueue(String tokenNumber, {String? reason}) {
+    final index = _queue.indexWhere((q) => q.tokenNumber == tokenNumber);
+    if (index != -1) {
+      final item = _queue[index];
+      _queue[index] = item.copyWith(
+        status: 'Waiting',
+        discrepancyNote:
+            reason != null ? 'On hold: $reason' : item.discrepancyNote,
+      );
+      _recalculateFarmerData();
+      RepositoryProvider.booking.updateBookingStatus(
+        tokenNumber,
+        BookingLifecycleStatus.waiting,
+      );
+      notifyListeners();
+    } else if (tokenNumber == _farmerData.tokenNumber) {
+      _farmerData = _farmerData.copyWith(
+        lifecycleStatus: 'Waiting',
+      );
+      RepositoryProvider.booking.updateBookingStatus(
+        tokenNumber,
+        BookingLifecycleStatus.waiting,
+      );
       notifyListeners();
     }
   }
 
-  /// Phase 8: Officer action to confirm Quality Grade.
-  void confirmQuality(String tokenNumber, String grade) {
+  /// Phase 8 & Phase C: Officer action to confirm Quality Grade.
+  void confirmQuality(String tokenNumber, String grade, {String? notes}) {
     final index = _queue.indexWhere((q) => q.tokenNumber == tokenNumber);
     if (index != -1) {
       final item = _queue[index];
@@ -785,7 +1004,9 @@ class ProcurementStateService extends ChangeNotifier {
       );
 
       String newStatus = item.status;
-      if (item.status == 'Quality Check' || item.status == 'Sampling') {
+      if (item.status == 'Quality Check' ||
+          item.status == 'Sampling' ||
+          item.status == 'Waiting') {
         newStatus = 'Weighment';
       }
 
@@ -807,13 +1028,44 @@ class ProcurementStateService extends ChangeNotifier {
         actualQty: actualQ,
         grade: grade,
         hasDiscrepancy: false,
+        officerNotes: notes,
+      );
+      notifyListeners();
+    } else if (tokenNumber == _farmerData.tokenNumber) {
+      final actualQ = double.tryParse(
+              _farmerData.actualQuantity.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+          50.2;
+      final calc = PaymentCalculationService.calculate(
+        acceptedQuantity: actualQ,
+        crop: _farmerData.cropName,
+        qualityGrade: grade,
+      );
+      String newStatus = _farmerData.lifecycleStatus;
+      if (newStatus == 'Quality Check' ||
+          newStatus == 'Sampling' ||
+          newStatus == 'Waiting') {
+        newStatus = 'Weighment';
+      }
+      _farmerData = _farmerData.copyWith(
+        qualityGrade: grade,
+        lifecycleStatus: newStatus,
+        grossAmount: calc.grossAmount,
+        netPayable: calc.netPayable,
+      );
+      RepositoryProvider.procurement.recordWeighmentAndGrade(
+        bookingId: tokenNumber,
+        actualQty: actualQ,
+        grade: grade,
+        hasDiscrepancy: false,
+        officerNotes: notes,
       );
       notifyListeners();
     }
   }
 
-  /// Phase 8: Officer action to record and confirm actual weighment.
-  void confirmWeighment(String tokenNumber, double actualWeight) {
+  /// Phase 8 & Phase C: Officer action to record and confirm actual weighment.
+  void confirmWeighment(String tokenNumber, double actualWeight,
+      {String? overrideReason}) {
     final index = _queue.indexWhere((q) => q.tokenNumber == tokenNumber);
     if (index != -1) {
       final item = _queue[index];
@@ -822,7 +1074,8 @@ class ProcurementStateService extends ChangeNotifier {
           50.0;
       final diff = actualWeight - expectedQ;
       final discrepancy = diff.abs() > 0.05
-          ? 'Actual quantity differs from booked quantity by ${diff > 0 ? '+' : ''}${diff.toStringAsFixed(1)} Quintals.'
+          ? (overrideReason ??
+              'Actual quantity differs from booked quantity by ${diff > 0 ? '+' : ''}${diff.toStringAsFixed(1)} Quintals.')
           : null;
 
       final calc = PaymentCalculationService.calculate(
@@ -832,7 +1085,9 @@ class ProcurementStateService extends ChangeNotifier {
       );
 
       String newStatus = item.status;
-      if (item.status == 'Weighment' || item.status == 'Quality Check') {
+      if (item.status == 'Weighment' ||
+          item.status == 'Quality Check' ||
+          item.status == 'Waiting') {
         newStatus = 'Accepted';
       }
 
@@ -852,30 +1107,163 @@ class ProcurementStateService extends ChangeNotifier {
             'वास्तविक वजन ${actualWeight.toStringAsFixed(1)} क्विंटल दर्ज किया गया।',
         tokenNumber: tokenNumber,
       );
+      _weighmentAudits.insert(
+        0,
+        WeighmentAuditEntry(
+          id: 'AUD-${DateTime.now().millisecondsSinceEpoch}',
+          tokenNumber: tokenNumber,
+          farmerName: item.farmerName,
+          crop: item.crop,
+          originalWeight: expectedQ,
+          updatedWeight: actualWeight,
+          changedBy: AuthService.instance.currentOfficerId ?? 'OFF-101',
+          changedAt: DateTime.now(),
+          reason: overrideReason ??
+              (diff.abs() > 0.05
+                  ? 'Quantity discrepancy recorded'
+                  : 'Certified dock weighment'),
+        ),
+      );
       RepositoryProvider.procurement.recordWeighmentAndGrade(
         bookingId: tokenNumber,
         actualQty: actualWeight,
         grade: item.qualityGrade,
         hasDiscrepancy: discrepancy != null,
         previousWeight: expectedQ,
+        officerNotes: overrideReason,
+      );
+      notifyListeners();
+    } else if (tokenNumber == _farmerData.tokenNumber) {
+      final expectedQ = double.tryParse(
+              _farmerData.quantity.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+          50.0;
+      final diff = actualWeight - expectedQ;
+      final discrepancy = diff.abs() > 0.05
+          ? (overrideReason ??
+              'Actual quantity differs from booked quantity by ${diff > 0 ? '+' : ''}${diff.toStringAsFixed(1)} Quintals.')
+          : null;
+
+      final calc = PaymentCalculationService.calculate(
+        acceptedQuantity: actualWeight,
+        crop: _farmerData.cropName,
+        qualityGrade: _farmerData.qualityGrade,
+      );
+
+      String newStatus = _farmerData.lifecycleStatus;
+      if (newStatus == 'Weighment' ||
+          newStatus == 'Quality Check' ||
+          newStatus == 'Waiting') {
+        newStatus = 'Accepted';
+      }
+
+      _farmerData = _farmerData.copyWith(
+        actualQuantity: '${actualWeight.toStringAsFixed(1)} Quintals',
+        grossAmount: calc.grossAmount,
+        netPayable: calc.netPayable,
+        lifecycleStatus: newStatus,
+      );
+      _weighmentAudits.add(
+        WeighmentAuditEntry(
+          id: 'AUD-${DateTime.now().millisecondsSinceEpoch}',
+          tokenNumber: tokenNumber,
+          farmerName: _farmerData.farmerName,
+          crop: _farmerData.cropName,
+          originalWeight: expectedQ,
+          updatedWeight: actualWeight,
+          changedBy: AuthService.instance.currentOfficerId ?? 'OFF-101',
+          changedAt: DateTime.now(),
+          reason: overrideReason ??
+              (diff.abs() > 0.05
+                  ? 'Quantity discrepancy recorded'
+                  : 'Certified dock weighment'),
+        ),
+      );
+      RepositoryProvider.procurement.recordWeighmentAndGrade(
+        bookingId: tokenNumber,
+        actualQty: actualWeight,
+        grade: _farmerData.qualityGrade,
+        hasDiscrepancy: discrepancy != null,
+        previousWeight: expectedQ,
+        officerNotes: overrideReason,
       );
       notifyListeners();
     }
   }
 
-  /// Phase 8: Officer action: Accept Produce
-  void acceptProduce(String tokenNumber) {
+  /// Phase 8 & Phase C: Officer action: Accept Produce with pre-validation and duplicate prevention.
+  bool acceptProduce(String tokenNumber, {String? officerNotes}) {
     final index = _queue.indexWhere((q) => q.tokenNumber == tokenNumber);
     if (index != -1) {
-      _queue[index] = _queue[index].copyWith(status: 'Accepted');
+      final item = _queue[index];
+      // Duplicate acceptance guard
+      if (item.status == 'Completed' ||
+          (item.status == 'Accepted' && item.paymentStatus == 'Completed')) {
+        return false;
+      }
+
+      final ref = item.paymentReference ??
+          'PAY-2026-${tokenNumber.replaceAll('TK-', '')}';
+      _queue[index] = item.copyWith(
+        status: 'Accepted',
+        paymentStatus:
+            item.paymentStatus == 'Completed' ? 'Completed' : 'Pending',
+        paymentReference: ref,
+      );
+
+      if (_waitingCount > 0 && item.status != 'Accepted') {
+        _waitingCount--;
+      }
+      _completedCount++;
+
       _recalculateFarmerData();
       NotificationService().notifyProcurementAccepted(
         crop: _queue[index].crop,
         quantity: _queue[index].actualQuantity,
         tokenNumber: tokenNumber,
       );
+      RepositoryProvider.booking.updateBookingStatus(
+        tokenNumber,
+        BookingLifecycleStatus.completed,
+      );
+      RepositoryProvider.payment.updatePaymentStatus(
+        bookingId: tokenNumber,
+        paymentStatus: PaymentLifecycleStatus.pending,
+        grossAmount: _queue[index].grossAmount,
+        netAmount: _queue[index].netPayable,
+        reference: ref,
+      );
       notifyListeners();
+      return true;
+    } else if (tokenNumber == _farmerData.tokenNumber) {
+      if (_farmerData.lifecycleStatus == 'Completed') {
+        return false;
+      }
+      final ref = _farmerData.paymentReference.isNotEmpty
+          ? _farmerData.paymentReference
+          : 'PAY-2026-${tokenNumber.replaceAll('TK-', '')}';
+      _farmerData = _farmerData.copyWith(
+        lifecycleStatus: 'Accepted',
+        paymentStatus: 'Pending',
+        paymentReference: ref,
+      );
+      if (_waitingCount > 0) _waitingCount--;
+      _completedCount++;
+
+      RepositoryProvider.booking.updateBookingStatus(
+        tokenNumber,
+        BookingLifecycleStatus.completed,
+      );
+      RepositoryProvider.payment.updatePaymentStatus(
+        bookingId: tokenNumber,
+        paymentStatus: PaymentLifecycleStatus.pending,
+        grossAmount: _farmerData.grossAmount,
+        netAmount: _farmerData.netPayable,
+        reference: ref,
+      );
+      notifyListeners();
+      return true;
     }
+    return false;
   }
 
   /// Phase 8: Officer action: Initiate Payment
@@ -953,13 +1341,179 @@ class ProcurementStateService extends ChangeNotifier {
       category: reason,
       tokenNumber: tokenNumber,
     );
+    final activeFarmerId = AuthService.instance.currentUserId ??
+        '22222222-2222-2222-2222-222222222222';
     RepositoryProvider.dispute.submitDispute(
-      farmerId: '22222222-2222-2222-2222-222222222222',
+      farmerId: activeFarmerId,
       bookingId: tokenNumber,
       category: reason,
       description: explanation ?? '',
     );
     notifyListeners();
+  }
+
+  /// Phase E: Seed demo disputes for Officer Dispute Console demonstration
+  void seedDemoDisputes() {
+    _disputes.clear();
+    _disputes.addAll([
+      FarmerDisputeReport(
+        id: 'DISP-8492',
+        tokenNumber: 'TK-8492',
+        farmerName: 'Ramesh Kumar',
+        reason: 'Quantity discrepancy',
+        explanation:
+            'Actual quantity measured is 47.80 Qtl whereas registered was 50.00 Qtl (-2.20 Qtl).',
+        submittedAt: DateTime.now().subtract(const Duration(hours: 2)),
+        status: 'Submitted',
+        crop: 'Wheat',
+        registeredQuantity: 50.0,
+        actualQuantity: 47.8,
+        officerId: 'OFF-101',
+        centreName: 'Example Procurement Centre',
+      ),
+      FarmerDisputeReport(
+        id: 'DISP-7812',
+        tokenNumber: 'TK-7812',
+        farmerName: 'Gurpreet Singh',
+        reason: 'Quality grade dispute',
+        explanation: 'Moisture content re-tested and cleared for FAQ grade.',
+        submittedAt: DateTime.now().subtract(const Duration(days: 3)),
+        status: 'Resolved',
+        crop: 'Paddy (Rice)',
+        registeredQuantity: 65.0,
+        actualQuantity: 65.0,
+        officerId: 'OFF-101',
+        officerNotes:
+            'Moisture re-inspected with digital probe; certified FAQ grade.',
+        resolvedAt: DateTime.now().subtract(const Duration(days: 2)),
+        centreName: 'Example Procurement Centre',
+      ),
+    ]);
+    notifyListeners();
+  }
+
+  /// Phase E: Officer action: Resolve a dispute with official notes
+  void resolveDispute(String disputeId, {String? notes}) {
+    final index = _disputes.indexWhere((d) => d.id == disputeId);
+    if (index != -1) {
+      final current = _disputes[index];
+      _disputes[index] = current.copyWith(
+        status: 'Resolved',
+        officerNotes: notes ?? current.officerNotes,
+        resolvedAt: DateTime.now(),
+      );
+      RepositoryProvider.dispute
+          .updateDisputeStatus(disputeId, 'Resolved', officerNotes: notes);
+      NotificationService().notifyCentreStatus(
+        status: 'Dispute Resolved',
+        reasonEn:
+            'Grievance $disputeId has been investigated and resolved by officer.',
+        reasonHi:
+            'शिकायत $disputeId की जांच कर अधिकारी द्वारा समाधान कर दिया गया है।',
+        tokenNumber: current.tokenNumber,
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Phase E: Officer action: Reject a dispute with official explanation
+  void rejectDispute(String disputeId, {String? notes}) {
+    final index = _disputes.indexWhere((d) => d.id == disputeId);
+    if (index != -1) {
+      final current = _disputes[index];
+      _disputes[index] = current.copyWith(
+        status: 'Rejected',
+        officerNotes: notes ?? current.officerNotes,
+        resolvedAt: DateTime.now(),
+      );
+      RepositoryProvider.dispute
+          .updateDisputeStatus(disputeId, 'Rejected', officerNotes: notes);
+      notifyListeners();
+    }
+  }
+
+  /// Phase E: Officer action: Escalate a dispute to District / APMC authorities
+  void escalateDispute(String disputeId, {String? notes}) {
+    final index = _disputes.indexWhere((d) => d.id == disputeId);
+    if (index != -1) {
+      final current = _disputes[index];
+      _disputes[index] = current.copyWith(
+        status: 'Escalated',
+        officerNotes: notes ?? current.officerNotes,
+      );
+      RepositoryProvider.dispute
+          .updateDisputeStatus(disputeId, 'Escalated', officerNotes: notes);
+      notifyListeners();
+    }
+  }
+
+  /// Phase E: Officer prototype action: Mark payment failed (e.g. invalid IFSC or bank return)
+  void markPaymentFailed(String tokenNumber, {String? reason}) {
+    final index = _queue.indexWhere((q) => q.tokenNumber == tokenNumber);
+    if (index != -1) {
+      _queue[index] = _queue[index].copyWith(
+        paymentStatus: 'Failed',
+      );
+      _recalculateFarmerData();
+      RepositoryProvider.payment.updatePaymentStatus(
+        bookingId: tokenNumber,
+        paymentStatus: PaymentLifecycleStatus.failed,
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Phase E: Officer prototype action: Retry failed payment settlement
+  void retryPayment(String tokenNumber) {
+    final index = _queue.indexWhere((q) => q.tokenNumber == tokenNumber);
+    if (index != -1) {
+      _queue[index] = _queue[index].copyWith(
+        paymentStatus: 'Processing',
+      );
+      _recalculateFarmerData();
+      RepositoryProvider.payment.updatePaymentStatus(
+        bookingId: tokenNumber,
+        paymentStatus: PaymentLifecycleStatus.processing,
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Phase E: Officer action: Update centre operational parameters (Capacity, Rate, Delay, Status)
+  void updateCentreParameters({
+    int? capacity,
+    int? processingRatePerHour,
+    int? delayMinutes,
+    String? operatingStatus,
+  }) {
+    if (capacity != null) {
+      _centreCapacity = capacity;
+    }
+    if (processingRatePerHour != null && processingRatePerHour > 0) {
+      _centreProcessingRatePerHour = processingRatePerHour;
+      _averageProcessingMinutes =
+          (60 / processingRatePerHour).clamp(2, 20).round();
+      _processingRate = '~$processingRatePerHour Qtl / hr';
+    }
+    if (delayMinutes != null) {
+      _centreDelayMinutes = delayMinutes;
+      if (delayMinutes > 0 && _centreStatus.contains('Normal')) {
+        _centreStatus = 'Temporarily Delayed';
+      }
+    }
+    if (operatingStatus != null) {
+      setCentreStatus(operatingStatus);
+    } else {
+      _queue = _queue.map((item) {
+        final newWait = (item.peopleAhead * _averageProcessingMinutes) +
+            _centreDelayMinutes;
+        return item.copyWith(approxWaitMinutes: newWait);
+      }).toList();
+      _averageWait =
+          '${(7 * _averageProcessingMinutes) + _centreDelayMinutes} min';
+      _recalculateFarmerData();
+      notifyListeners();
+    }
   }
 
   /// Advances a farmer through the 7-stage procurement lifecycle:
@@ -1100,8 +1654,10 @@ class ProcurementStateService extends ChangeNotifier {
       centreName: centreName,
     );
     final double qtyNum = double.tryParse(quantity.split(' ').first) ?? 50.0;
+    final activeFarmerId = AuthService.instance.currentUserId ??
+        '22222222-2222-2222-2222-222222222222';
     RepositoryProvider.booking.createBooking(
-      farmerId: '22222222-2222-2222-2222-222222222222',
+      farmerId: activeFarmerId,
       centreId: centreName,
       crop: crop,
       quantity: qtyNum,
@@ -1118,8 +1674,8 @@ class ProcurementStateService extends ChangeNotifier {
   }
 
   /// Phase 14: Resolves an operational exception.
-  void resolveException(String id) {
-    _exceptionService.resolve(id);
+  void resolveException(String id, {String? officerId}) {
+    _exceptionService.resolve(id, officerId: officerId);
     notifyListeners();
   }
 
@@ -1162,6 +1718,9 @@ class ProcurementStateService extends ChangeNotifier {
     }
 
     _recalculateFarmerData();
+
+    // Persist reallocated slot through repository
+    RepositoryProvider.booking.updateBookingSlot(tokenNumber, newSlot);
 
     // Mark recommendation as reallocated if tracked
     final recId = 'realloc_$tokenNumber';
@@ -1248,8 +1807,13 @@ class ProcurementStateService extends ChangeNotifier {
     try {
       final centres = await RepositoryProvider.centre.getCentres();
       if (centres.isNotEmpty) {
+        final authCentreId = AuthService.instance.currentCentreId;
         final currentCentre = centres.firstWhere(
-          (c) => c.name == _centreName || c.id == _centreName,
+          (c) =>
+              (authCentreId != null &&
+                  (c.id == authCentreId || c.name == authCentreId)) ||
+              c.name == _centreName ||
+              c.id == _centreName,
           orElse: () => centres.first,
         );
         _centreName = currentCentre.name;
@@ -1261,8 +1825,10 @@ class ProcurementStateService extends ChangeNotifier {
             : 75;
       }
 
+      final activeFarmerId = AuthService.instance.currentUserId ??
+          '22222222-2222-2222-2222-222222222222';
       final produceList = await RepositoryProvider.farmer
-          .getFarmerProduce('22222222-2222-2222-2222-222222222222');
+          .getFarmerProduce(activeFarmerId);
       if (produceList.isNotEmpty) {
         final crop = produceList.first['crop']?.toString() ?? 'Wheat';
         final qty = (produceList.first['quantity'] as num?)?.toDouble() ?? 50.0;

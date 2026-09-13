@@ -18,6 +18,7 @@ class SlotReallocationRecommendation {
   final String reasonEn;
   final String reasonHi;
   final String reasonTe;
+  final String? expectedImpact;
   final int centreLoadPercent;
   final int estimatedWaitMinutes;
   final ReallocationStatus status;
@@ -34,6 +35,7 @@ class SlotReallocationRecommendation {
     required this.reasonEn,
     this.reasonHi = '',
     this.reasonTe = '',
+    this.expectedImpact,
     required this.centreLoadPercent,
     required this.estimatedWaitMinutes,
     this.status = ReallocationStatus.recommended,
@@ -43,6 +45,11 @@ class SlotReallocationRecommendation {
   bool get isPending => status == ReallocationStatus.recommended;
   bool get isReallocated => status == ReallocationStatus.reallocated;
   bool get isDismissed => status == ReallocationStatus.dismissed;
+
+  /// Human-readable expected impact statement.
+  String get displayExpectedImpact =>
+      expectedImpact ??
+      'Estimated peak wait reduced by approximately 18 minutes.';
 
   String localizedReason({bool isHindi = false, bool isTelugu = false}) {
     if (isTelugu && reasonTe.isNotEmpty) return reasonTe;
@@ -61,6 +68,7 @@ class SlotReallocationRecommendation {
     String? reasonEn,
     String? reasonHi,
     String? reasonTe,
+    String? expectedImpact,
     int? centreLoadPercent,
     int? estimatedWaitMinutes,
     ReallocationStatus? status,
@@ -77,8 +85,10 @@ class SlotReallocationRecommendation {
       reasonEn: reasonEn ?? this.reasonEn,
       reasonHi: reasonHi ?? this.reasonHi,
       reasonTe: reasonTe ?? this.reasonTe,
+      expectedImpact: expectedImpact ?? this.expectedImpact,
       centreLoadPercent: centreLoadPercent ?? this.centreLoadPercent,
-      estimatedWaitMinutes: estimatedWaitMinutes ?? this.estimatedWaitMinutes,
+      estimatedWaitMinutes:
+          estimatedWaitMinutes ?? this.estimatedWaitMinutes,
       status: status ?? this.status,
       reallocatedAt: reallocatedAt ?? this.reallocatedAt,
     );

@@ -17,11 +17,16 @@ import 'package:kisansetu/services/auth_service.dart';
 import 'package:kisansetu/services/crop_catalogue_service.dart';
 import 'package:kisansetu/services/procurement_state_service.dart';
 import 'package:kisansetu/services/repositories/repository_provider.dart';
+import 'package:kisansetu/models/farmer_payment_record.dart';
+import 'package:kisansetu/screens/farmer_payment_history_screen.dart';
+import 'package:kisansetu/screens/farmer_payment_screen.dart';
+import 'package:kisansetu/services/app_preferences_service.dart';
 import 'package:kisansetu/widgets/farmer/produce_summary_card.dart';
 
 void main() {
   setUp(() {
     ProcurementStateService().reset();
+    AppPreferencesService.instance.setUiLanguage('en');
   });
 
   group('Bug 1: Change Crop Screen & Crop Catalogue Verification', () {
@@ -367,6 +372,100 @@ void main() {
       // Displays RoleSelectionScreen for login
       expect(find.byType(RoleSelectionScreen), findsOneWidget);
       expect(find.byType(FarmerDashboardScreen), findsNothing);
+    });
+  });
+
+  group('Bug 3: Supabase Payment History Query & Model Mapping Verification', () {
+    test('1. FarmerPaymentRecord.fromMap properly parses Supabase mapped payment payload', () {
+      final mockSupabaseMappedPayment = {
+        'id': '88888888-8888-8888-8888-888888888888',
+        'booking_id': '55555555-5555-5555-5555-555555555555',
+        'token_number': 'TK-8492',
+        'token': 'TK-8492',
+        'crop_name': 'Wheat (गेहूं)',
+        'crop': 'Wheat (गेहूं)',
+        'quantity': '50.00 Quintals',
+        'actual_quantity': '50.20 Quintals',
+        'quality_grade': 'FAQ',
+        'centre_name': 'Khanna Grain Market',
+        'centre': 'Khanna Grain Market',
+        'gross_amount': 114205.00,
+        'deductions': 0.00,
+        'net_amount': 114205.00,
+        'payment_amount': 114205.00,
+        'payment_status': 'Completed',
+        'payment_reference': 'PAY-2026-8492',
+        'payment_date': '09 Sep 2026',
+        'date_time': '2026-09-09T11:30:00.000Z',
+        'created_at': '2026-09-09T11:30:00.000Z',
+      };
+
+      final record = FarmerPaymentRecord.fromMap(mockSupabaseMappedPayment);
+
+      expect(record.id, '88888888-8888-8888-8888-888888888888');
+      expect(record.bookingId, '55555555-5555-5555-5555-555555555555');
+      expect(record.tokenNumber, 'TK-8492');
+      expect(record.cropName, 'Wheat (गेहूं)');
+      expect(record.quantity, '50.00 Quintals');
+      expect(record.actualQuantity, '50.20 Quintals');
+      expect(record.qualityGrade, 'FAQ');
+      expect(record.centreName, 'Khanna Grain Market');
+      expect(record.grossAmount, 114205.00);
+      expect(record.deductions, 0.00);
+      expect(record.netAmount, 114205.00);
+      expect(record.paymentStatus, 'Completed');
+      expect(record.paymentReference, 'PAY-2026-8492');
+      expect(record.paymentDate, '09 Sep 2026');
+
+      // Test conversion to FarmerDashboardData
+      final dashboardData = record.toDashboardData(farmerName: 'Ramesh Kumar');
+      expect(dashboardData.cropName, 'Wheat (गेहूं)');
+      expect(dashboardData.quantity, '50.00 Quintals');
+      expect(dashboardData.centreName, 'Khanna Grain Market');
+      expect(dashboardData.tokenNumber, 'TK-8492');
+      expect(dashboardData.grossAmount, 114205.00);
+      expect(dashboardData.netPayable, 114205.00);
+      expect(dashboardData.paymentStatus, 'Completed');
+      expect(dashboardData.paymentReference, 'PAY-2026-8492');
+      expect(dashboardData.actualQuantity, '50.20 Quintals');
+    });
+
+    testWidgets('2. FarmerPaymentHistoryScreen renders payment cards and navigates to details',
+        (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: FarmerPaymentHistoryScreen(
+            isHindi: false,
+            isTelugu: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify screen title
+      expect(find.text('Payment History'), findsOneWidget);
+
+      // Verify transactions list rendered
+      expect(find.text('Procurement Transactions'), findsOneWidget);
+      expect(find.textContaining('Wheat'), findsWidgets);
+
+      // Tap the first payment card to open FarmerPaymentScreen
+      final firstReceiptButton = find.text('Receipt').first;
+      await tester.tap(firstReceiptButton);
+      await tester.pumpAndSettle();
+
+      // Verify FarmerPaymentScreen is opened with payment details and receipt download
+      expect(find.byType(FarmerPaymentScreen), findsOneWidget);
+      expect(find.text('Payment Tracker'), findsOneWidget);
+      expect(find.textContaining('Accepted:'), findsWidgets);
+      expect(find.text('Download Invoice / Receipt'), findsOneWidget);
+
+      // Verify invoice download action triggers
+      await tester.tap(find.text('Download Invoice / Receipt'));
+      await tester.pump();
+      expect(find.textContaining('Receipt downloaded successfully'), findsOneWidget);
     });
   });
 }

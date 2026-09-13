@@ -48,6 +48,32 @@ extension CapacityCongestionLevelExt on CapacityCongestionLevel {
     }
   }
 
+  String get displayTag {
+    switch (this) {
+      case CapacityCongestionLevel.normal:
+        return '🟢 LOW';
+      case CapacityCongestionLevel.busy:
+        return '🟠 MODERATE';
+      case CapacityCongestionLevel.highRisk:
+        return '🔴 HIGH';
+      case CapacityCongestionLevel.critical:
+        return '⛔ CRITICAL';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case CapacityCongestionLevel.normal:
+        return Icons.check_circle_rounded;
+      case CapacityCongestionLevel.busy:
+        return Icons.warning_amber_rounded;
+      case CapacityCongestionLevel.highRisk:
+        return Icons.error_outline_rounded;
+      case CapacityCongestionLevel.critical:
+        return Icons.dangerous_rounded;
+    }
+  }
+
   Color get color {
     switch (this) {
       case CapacityCongestionLevel.normal:
@@ -134,6 +160,20 @@ class CapacityForecastModel {
     required this.confidenceBasis,
     required this.recommendedAction,
   });
+
+  String get displayReason {
+    if (congestionLevel == CapacityCongestionLevel.critical) {
+      return 'Critical backlog: arrivals are significantly exceeding dock processing capacity.';
+    } else if (congestionLevel == CapacityCongestionLevel.highRisk) {
+      return 'Current arrivals are exceeding the estimated processing throughput.';
+    } else if (congestionLevel == CapacityCongestionLevel.busy) {
+      return 'Intake is approaching maximum capacity limits.';
+    }
+    return 'Processing rate is balanced with current arrival traffic.';
+  }
+
+  static const String operationalForecastLabel =
+      'Operational forecast based on current queue, capacity and processing rate.';
 
   CapacityForecastModel copyWith({
     ForecastWindow? window,

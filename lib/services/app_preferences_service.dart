@@ -116,7 +116,7 @@ class AppPreferencesService extends ChangeNotifier {
   /// by older screens into the short code used by this service.
   static String codeFromLegacy(String selectedLanguage) {
     final s = selectedLanguage.toLowerCase();
-    if (s == 'te' || s.contains('తెలుగు')) return 'te';
+    if (s == 'te' || s.contains('తెలుగు') || s.contains('telugu')) return 'te';
     if (s == 'hi' || s.contains('हिंदी') || s.contains('hindi')) return 'hi';
     return 'en';
   }

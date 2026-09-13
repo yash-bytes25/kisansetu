@@ -100,24 +100,25 @@ class ProduceSummaryCard extends StatelessWidget {
                         ),
                       ),
                       if (onChangeCrop != null) ...[
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Material(
-                          color: Colors.transparent,
+                          color: AppColors.primaryContainer.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(8),
                           child: InkWell(
                             key: const ValueKey('btn_change_crop'),
                             onTap: onChangeCrop,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(8),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
+                                horizontal: 8,
+                                vertical: 5,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(
-                                    Icons.swap_horiz_rounded,
-                                    size: 15,
+                                    Icons.grass_rounded,
+                                    size: 16,
                                     color: AppColors.primaryGreen,
                                   ),
                                   const SizedBox(width: 4),
@@ -127,9 +128,15 @@ class ProduceSummaryCard extends StatelessWidget {
                                         : (isHindi ? 'फसल बदलें' : 'Change Crop'),
                                     style: const TextStyle(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w800,
                                       color: AppColors.primaryGreen,
                                     ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 16,
+                                    color: AppColors.primaryGreen,
                                   ),
                                 ],
                               ),

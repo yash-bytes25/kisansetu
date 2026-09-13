@@ -39,7 +39,10 @@ class _FarmerSmartSlotScreenState extends State<FarmerSmartSlotScreen> {
   @override
   void initState() {
     super.initState();
-    _slots = SmartSlotService.recommendSlots(centre: widget.selectedCentre);
+    _slots = SmartSlotService.recommendSlots(
+      centre: widget.selectedCentre,
+      crop: widget.currentData.crop,
+    );
     // Default to the recommended slot
     _selectedSlot = _slots.firstWhere(
       (s) => s.isRecommended,

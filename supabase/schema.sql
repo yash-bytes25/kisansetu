@@ -17,20 +17,66 @@ CREATE TABLE IF NOT EXISTS public.farmers (
     phone VARCHAR(15) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
     preferred_language VARCHAR(10) NOT NULL DEFAULT 'hi',
+    state VARCHAR(100) DEFAULT 'Punjab',
+    district VARCHAR(100) DEFAULT 'Ludhiana',
+    village VARCHAR(150) DEFAULT 'Khanna Kalan',
+    aadhaar_masked VARCHAR(20) DEFAULT 'XXXX-XXXX-8492',
+    bank_name VARCHAR(150) DEFAULT 'State Bank of India (SBI)',
+    account_number_masked VARCHAR(30) DEFAULT 'A/C ending in **4321',
+    ifsc_code VARCHAR(15) DEFAULT 'SBIN0001234',
+    dbt_status VARCHAR(50) DEFAULT 'Aadhaar-Linked Active',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Idempotent column additions for existing deployments
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS state VARCHAR(100) DEFAULT 'Punjab';
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS district VARCHAR(100) DEFAULT 'Ludhiana';
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS village VARCHAR(150) DEFAULT 'Khanna Kalan';
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS aadhaar_masked VARCHAR(20) DEFAULT 'XXXX-XXXX-8492';
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS bank_name VARCHAR(150) DEFAULT 'State Bank of India (SBI)';
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS account_number_masked VARCHAR(30) DEFAULT 'A/C ending in **4321';
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(15) DEFAULT 'SBIN0001234';
+ALTER TABLE public.farmers ADD COLUMN IF NOT EXISTS dbt_status VARCHAR(50) DEFAULT 'Aadhaar-Linked Active';
 
 -- 1.2 Procurement Centres
 CREATE TABLE IF NOT EXISTS public.procurement_centres (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(150) NOT NULL,
     location VARCHAR(255) NOT NULL,
+    address VARCHAR(255),
+    state VARCHAR(100) NOT NULL DEFAULT 'Punjab',
+    district VARCHAR(100) NOT NULL DEFAULT 'Ludhiana',
+    mandal VARCHAR(100) NOT NULL DEFAULT 'Khanna',
+    latitude NUMERIC(10, 6),
+    longitude NUMERIC(10, 6),
     status VARCHAR(50) NOT NULL DEFAULT 'operational', -- 'operational', 'closed', 'maintenance'
     capacity INTEGER NOT NULL DEFAULT 500, -- in Quintals per day
+    operating_status VARCHAR(50) NOT NULL DEFAULT 'operational',
+    current_load_percent INTEGER NOT NULL DEFAULT 75,
+    delay_minutes INTEGER NOT NULL DEFAULT 0,
+    processing_rate_per_hour INTEGER NOT NULL DEFAULT 15,
+    available_slots INTEGER NOT NULL DEFAULT 10,
+    supported_crops TEXT[] DEFAULT ARRAY['Wheat', 'Paddy (Rice)', 'Mustard', 'Cotton'],
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- 1.2b India Administrative Locations (Hierarchical State -> District -> Mandal Master)
+CREATE TABLE IF NOT EXISTS public.administrative_locations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    state VARCHAR(100) NOT NULL,
+    district VARCHAR(100) NOT NULL,
+    mandal VARCHAR(100) NOT NULL,
+    state_hi VARCHAR(100),
+    state_te VARCHAR(100),
+    district_hi VARCHAR(100),
+    district_te VARCHAR(100),
+    mandal_hi VARCHAR(100),
+    mandal_te VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 
 -- 1.3 Officer Profiles
 CREATE TABLE IF NOT EXISTS public.officer_profiles (
@@ -142,6 +188,8 @@ CREATE INDEX IF NOT EXISTS idx_payments_booking ON public.payments(booking_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_farmer ON public.notifications(farmer_id);
 CREATE INDEX IF NOT EXISTS idx_disputes_farmer ON public.disputes(farmer_id);
 CREATE INDEX IF NOT EXISTS idx_officer_centre ON public.officer_profiles(officer_id, centre_id);
+CREATE INDEX IF NOT EXISTS idx_admin_loc_state ON public.administrative_locations(state);
+CREATE INDEX IF NOT EXISTS idx_admin_loc_dist ON public.administrative_locations(district);
 
 -- =============================================================================
 -- 3. ROW LEVEL SECURITY (RLS) POLICIES
@@ -151,6 +199,7 @@ CREATE INDEX IF NOT EXISTS idx_officer_centre ON public.officer_profiles(officer
 -- Enable RLS on all tables
 ALTER TABLE public.farmers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.procurement_centres ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.administrative_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.officer_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.farmer_produce ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
@@ -191,6 +240,11 @@ CREATE POLICY "Farmers can insert own profile"
 CREATE POLICY "Anyone authenticated can view centres"
     ON public.procurement_centres FOR SELECT
     TO authenticated
+    USING (true);
+
+-- 3.2b Administrative Locations Policies (Public read for nationwide master)
+CREATE POLICY "Public read for administrative locations"
+    ON public.administrative_locations FOR SELECT
     USING (true);
 
 -- 3.3 Officer Profiles Policies

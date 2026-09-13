@@ -123,6 +123,36 @@ class CropCatalogueService {
     ),
   ];
 
+  /// Phase 23: The 10 prominent high-relevance crops:
+  /// 1. Paddy / Rice
+  /// 2. Maize
+  /// 3. Red Gram / Tur
+  /// 4. Green Gram / Moong
+  /// 5. Black Gram / Urad
+  /// 6. Wheat
+  /// 7. Groundnut
+  /// 8. Sunflower
+  /// 9. Cotton
+  /// 10. Sugarcane
+  static List<CropModel> get prominent10Crops => [
+        findById('paddy')!,
+        findById('maize')!,
+        findById('tur')!,
+        findById('moong')!,
+        findById('urad')!,
+        findById('wheat')!,
+        findById('groundnut')!,
+        findById('sunflower')!,
+        findById('cotton')!,
+        findById('sugarcane')!,
+      ];
+
+  /// Phase 23: The remaining 13 crops from the 23-crop catalogue.
+  static List<CropModel> get otherCrops {
+    final prominentIds = prominent10Crops.map((c) => c.cropId).toSet();
+    return allCrops.where((c) => !prominentIds.contains(c.cropId)).toList();
+  }
+
   static const List<CropModel> allCrops = [
     // --- 10 Primary Crops ---
     ...default10Crops,

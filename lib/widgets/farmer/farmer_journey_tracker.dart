@@ -181,13 +181,16 @@ class FarmerJourneyTracker extends StatelessWidget {
         ? '8-దశల పారదర్శక పురోగతి'
         : (isHindi ? '8-चरणीय पारदर्शी प्रगति' : '8-Stage Transparent Progress');
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.cardBorder, width: 1),
-      ),
-      child: Padding(
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        elevation: 2,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.cardBorder, width: 1),
+        ),
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,6 +467,7 @@ class FarmerJourneyTracker extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

@@ -41,13 +41,30 @@ class AlternativeCentreService {
   }) {
     final pool = allCentres ?? ProcurementCentre.getMockCentres();
 
-    // Exclude current centre
+    // Exclude current centre, stopped/unavailable centres, and unsafe capacity
     final candidates = pool.where((c) {
       final nameMatches =
           c.name.trim().toLowerCase() == currentCentreName.trim().toLowerCase();
       final idMatches =
           c.id.trim().toLowerCase() == currentCentreName.trim().toLowerCase();
-      return !nameMatches && !idMatches;
+      if (nameMatches || idMatches) return false;
+
+      // Exclude stopped, paused, or halted centres
+      final statusLower = c.status.toLowerCase();
+      final isStopped = statusLower.contains('stop') ||
+          statusLower.contains('halt') ||
+          statusLower.contains('pause');
+      if (isStopped) return false;
+
+      // Exclude centres that are not operational
+      if (!c.isOperational) return false;
+
+      // Exclude centres at unsafe/invalid capacity (> 90% load or invalid capacity)
+      final cap = c.capacity > 0 ? c.capacity : 100;
+      final loadPercent = ((c.todayQueueCount / cap) * 100).round();
+      if (loadPercent > 90 || c.capacity <= 0) return false;
+
+      return true;
     }).toList();
 
     final List<AlternativeCentreRecommendation> recommendations = [];

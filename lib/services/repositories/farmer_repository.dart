@@ -15,6 +15,18 @@ abstract class FarmerRepository {
     required String preferredLanguage,
   });
   Future<bool> updateFarmerLanguage(String farmerId, String languageCode);
+  Future<bool> updateKycDetails({
+    required String farmerId,
+    required String state,
+    required String district,
+    required String village,
+  });
+  Future<bool> updateBankDetails({
+    required String farmerId,
+    required String bankName,
+    required String accountNumberMasked,
+    required String ifscCode,
+  });
   Future<List<Map<String, dynamic>>> getFarmerProduce(String farmerId);
   Future<Map<String, dynamic>?> saveFarmerProduce({
     required String farmerId,
@@ -101,6 +113,46 @@ class LocalFarmerRepository implements FarmerRepository {
       _inMemoryFarmers[farmerId]!['preferred_language'] = languageCode;
     }
     debugPrint('LocalFarmerRepository: language updated to $languageCode for $farmerId');
+    return true;
+  }
+
+  @override
+  Future<bool> updateKycDetails({
+    required String farmerId,
+    required String state,
+    required String district,
+    required String village,
+  }) async {
+    final farmer = _inMemoryFarmers.putIfAbsent(farmerId, () => {
+      'id': farmerId,
+      'name': 'Ramesh Kumar',
+      'phone': '9876543210',
+      'preferred_language': 'hi',
+    });
+    farmer['state'] = state;
+    farmer['district'] = district;
+    farmer['village'] = village;
+    farmer['updated_at'] = DateTime.now().toIso8601String();
+    return true;
+  }
+
+  @override
+  Future<bool> updateBankDetails({
+    required String farmerId,
+    required String bankName,
+    required String accountNumberMasked,
+    required String ifscCode,
+  }) async {
+    final farmer = _inMemoryFarmers.putIfAbsent(farmerId, () => {
+      'id': farmerId,
+      'name': 'Ramesh Kumar',
+      'phone': '9876543210',
+      'preferred_language': 'hi',
+    });
+    farmer['bank_name'] = bankName;
+    farmer['account_number_masked'] = accountNumberMasked;
+    farmer['ifsc_code'] = ifscCode;
+    farmer['updated_at'] = DateTime.now().toIso8601String();
     return true;
   }
 
@@ -236,6 +288,80 @@ class SupabaseFarmerRepository implements FarmerRepository {
     } catch (e) {
       debugPrint('SupabaseFarmerRepository.updateFarmerLanguage error: $e');
       return false;
+    }
+  }
+
+  @override
+  Future<bool> updateKycDetails({
+    required String farmerId,
+    required String state,
+    required String district,
+    required String village,
+  }) async {
+    if (!_supabase.isReady) {
+      return await LocalFarmerRepository().updateKycDetails(
+        farmerId: farmerId,
+        state: state,
+        district: district,
+        village: village,
+      );
+    }
+    try {
+      await _supabase.client!
+          .from('farmers')
+          .update({
+            'state': state,
+            'district': district,
+            'village': village,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', farmerId);
+      return true;
+    } catch (e) {
+      debugPrint('SupabaseFarmerRepository.updateKycDetails error: $e');
+      return await LocalFarmerRepository().updateKycDetails(
+        farmerId: farmerId,
+        state: state,
+        district: district,
+        village: village,
+      );
+    }
+  }
+
+  @override
+  Future<bool> updateBankDetails({
+    required String farmerId,
+    required String bankName,
+    required String accountNumberMasked,
+    required String ifscCode,
+  }) async {
+    if (!_supabase.isReady) {
+      return await LocalFarmerRepository().updateBankDetails(
+        farmerId: farmerId,
+        bankName: bankName,
+        accountNumberMasked: accountNumberMasked,
+        ifscCode: ifscCode,
+      );
+    }
+    try {
+      await _supabase.client!
+          .from('farmers')
+          .update({
+            'bank_name': bankName,
+            'account_number_masked': accountNumberMasked,
+            'ifsc_code': ifscCode,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', farmerId);
+      return true;
+    } catch (e) {
+      debugPrint('SupabaseFarmerRepository.updateBankDetails error: $e');
+      return await LocalFarmerRepository().updateBankDetails(
+        farmerId: farmerId,
+        bankName: bankName,
+        accountNumberMasked: accountNumberMasked,
+        ifscCode: ifscCode,
+      );
     }
   }
 

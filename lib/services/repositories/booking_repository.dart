@@ -24,12 +24,17 @@ abstract class BookingRepository {
   Future<List<Map<String, dynamic>>> getFarmerBookings(String farmerId);
   Future<List<Map<String, dynamic>>> getCentreBookings(String centreId);
   Future<bool> updateBookingStatus(String bookingId, String status);
+  Future<bool> updateBookingSlot(String bookingIdOrToken, String newSlot);
   Future<List<ProcurementCentre>> getProcurementCentres();
 }
 
 /// Local in-memory implementation of [BookingRepository].
 class LocalBookingRepository implements BookingRepository {
   static final Map<String, Map<String, dynamic>> _inMemoryBookings = {};
+
+  static void reset() {
+    _inMemoryBookings.clear();
+  }
 
   @override
   Future<Map<String, dynamic>?> createBooking({
@@ -67,7 +72,7 @@ class LocalBookingRepository implements BookingRepository {
     }
     final state = ProcurementStateService();
     final data = state.farmerData;
-    return {
+    final booking = {
       'id': bookingId,
       'farmer_id': '22222222-2222-2222-2222-222222222222',
       'centre_id': state.centreName,
@@ -78,6 +83,8 @@ class LocalBookingRepository implements BookingRepository {
       'status': BookingLifecycleStatus.booked,
       'created_at': DateTime.now().toIso8601String(),
     };
+    _inMemoryBookings[bookingId] = booking;
+    return booking;
   }
 
   @override
@@ -145,8 +152,29 @@ class LocalBookingRepository implements BookingRepository {
 
   @override
   Future<bool> updateBookingStatus(String bookingId, String status) async {
+    final current = await getBooking(bookingId);
+    final currentStatus = current?['status']?.toString() ?? BookingLifecycleStatus.booked;
+    if (!BookingLifecycleStatus.canTransition(currentStatus, status)) {
+      debugPrint('LocalBookingRepository: Invalid transition from $currentStatus to $status for booking $bookingId');
+      return false;
+    }
     if (_inMemoryBookings.containsKey(bookingId)) {
       _inMemoryBookings[bookingId]!['status'] = status.toUpperCase();
+    }
+    return true;
+  }
+
+  @override
+  Future<bool> updateBookingSlot(String bookingIdOrToken, String newSlot) async {
+    if (_inMemoryBookings.containsKey(bookingIdOrToken)) {
+      _inMemoryBookings[bookingIdOrToken]!['slot_time'] = newSlot;
+      return true;
+    }
+    for (final b in _inMemoryBookings.values) {
+      if (b['token'] == bookingIdOrToken || b['id'] == bookingIdOrToken) {
+        b['slot_time'] = newSlot;
+        return true;
+      }
     }
     return true;
   }
@@ -212,6 +240,29 @@ class SupabaseBookingRepository implements BookingRepository {
     }
   }
 
+  Map<String, dynamic> _flattenBooking(Map<dynamic, dynamic> raw) {
+    final map = Map<String, dynamic>.from(raw);
+    final produce = map['farmer_produce'] is Map
+        ? Map<String, dynamic>.from(map['farmer_produce'] as Map)
+        : (map['farmer_produce'] is List && (map['farmer_produce'] as List).isNotEmpty)
+            ? Map<String, dynamic>.from((map['farmer_produce'] as List).first as Map)
+            : null;
+    final centre = map['procurement_centres'] is Map
+        ? Map<String, dynamic>.from(map['procurement_centres'] as Map)
+        : (map['procurement_centres'] is List && (map['procurement_centres'] as List).isNotEmpty)
+            ? Map<String, dynamic>.from((map['procurement_centres'] as List).first as Map)
+            : null;
+
+    if (produce != null) {
+      map['crop'] = map['crop'] ?? produce['crop'];
+      map['quantity'] = map['quantity'] ?? produce['quantity'];
+    }
+    if (centre != null) {
+      map['centre_name'] = map['centre_name'] ?? centre['name'];
+    }
+    return map;
+  }
+
   @override
   Future<Map<String, dynamic>?> getBooking(String bookingId) async {
     if (!_supabase.isReady) {
@@ -220,10 +271,13 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _supabase.client!
           .from('bookings')
-          .select()
+          .select('*, farmer_produce(id, crop, quantity), procurement_centres(id, name)')
           .eq('id', bookingId)
           .maybeSingle();
-      return response ?? await LocalBookingRepository().getBooking(bookingId);
+      if (response != null) {
+        return _flattenBooking(response);
+      }
+      return await LocalBookingRepository().getBooking(bookingId);
     } catch (e) {
       debugPrint('SupabaseBookingRepository.getBooking error: $e');
       return await LocalBookingRepository().getBooking(bookingId);
@@ -238,10 +292,13 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final response = await _supabase.client!
           .from('bookings')
-          .select()
+          .select('*, farmer_produce(id, crop, quantity), procurement_centres(id, name)')
           .eq('token', token)
           .maybeSingle();
-      return response ?? await LocalBookingRepository().getBookingByToken(token);
+      if (response != null) {
+        return _flattenBooking(response);
+      }
+      return await LocalBookingRepository().getBookingByToken(token);
     } catch (e) {
       debugPrint('SupabaseBookingRepository.getBookingByToken error: $e');
       return await LocalBookingRepository().getBookingByToken(token);
@@ -256,13 +313,13 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final List<dynamic> response = await _supabase.client!
           .from('bookings')
-          .select()
+          .select('*, farmer_produce(id, crop, quantity), procurement_centres(id, name)')
           .eq('farmer_id', farmerId)
           .order('created_at', ascending: false);
       if (response.isEmpty) {
         return await LocalBookingRepository().getFarmerBookings(farmerId);
       }
-      return response.cast<Map<String, dynamic>>();
+      return response.map<Map<String, dynamic>>((b) => _flattenBooking(b as Map)).toList();
     } catch (e) {
       debugPrint('SupabaseBookingRepository.getFarmerBookings error: $e');
       return await LocalBookingRepository().getFarmerBookings(farmerId);
@@ -277,13 +334,13 @@ class SupabaseBookingRepository implements BookingRepository {
     try {
       final List<dynamic> response = await _supabase.client!
           .from('bookings')
-          .select()
+          .select('*, farmer_produce(id, crop, quantity), procurement_centres(id, name)')
           .eq('centre_id', centreId)
           .order('created_at', ascending: false);
       if (response.isEmpty) {
         return await LocalBookingRepository().getCentreBookings(centreId);
       }
-      return response.cast<Map<String, dynamic>>();
+      return response.map<Map<String, dynamic>>((b) => _flattenBooking(b as Map)).toList();
     } catch (e) {
       debugPrint('SupabaseBookingRepository.getCentreBookings error: $e');
       return await LocalBookingRepository().getCentreBookings(centreId);
@@ -296,6 +353,12 @@ class SupabaseBookingRepository implements BookingRepository {
       return await LocalBookingRepository().updateBookingStatus(bookingId, status);
     }
     try {
+      final current = await getBooking(bookingId);
+      final currentStatus = current?['status']?.toString() ?? BookingLifecycleStatus.booked;
+      if (!BookingLifecycleStatus.canTransition(currentStatus, status)) {
+        debugPrint('SupabaseBookingRepository: Invalid transition from $currentStatus to $status for booking $bookingId');
+        return false;
+      }
       await _supabase.client!
           .from('bookings')
           .update({
@@ -307,6 +370,28 @@ class SupabaseBookingRepository implements BookingRepository {
     } catch (e) {
       debugPrint('SupabaseBookingRepository.updateBookingStatus error: $e');
       return await LocalBookingRepository().updateBookingStatus(bookingId, status);
+    }
+  }
+
+  @override
+  Future<bool> updateBookingSlot(String bookingIdOrToken, String newSlot) async {
+    if (!_supabase.isReady) {
+      return await LocalBookingRepository()
+          .updateBookingSlot(bookingIdOrToken, newSlot);
+    }
+    try {
+      await _supabase.client!
+          .from('bookings')
+          .update({
+            'slot_time': newSlot,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .or('id.eq.$bookingIdOrToken,token.eq.$bookingIdOrToken');
+      return true;
+    } catch (e) {
+      debugPrint('SupabaseBookingRepository.updateBookingSlot error: $e');
+      return await LocalBookingRepository()
+          .updateBookingSlot(bookingIdOrToken, newSlot);
     }
   }
 

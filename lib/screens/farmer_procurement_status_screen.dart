@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/farmer_dashboard_data.dart';
 import '../services/app_preferences_service.dart';
+import '../services/crop_catalogue_service.dart';
 import '../services/payment_calculation_service.dart';
 import '../services/procurement_state_service.dart';
 import '../services/voice_assistant_speech/voice_assistant_speech_service.dart';
@@ -425,9 +426,9 @@ class _FarmerProcurementStatusScreenState
           _buildRowInfo(
             icon: Icons.grass_rounded,
             label: _isTelugu ? 'పంట' : (_isHindi ? 'फसल' : 'Crop'),
-            value: _isTelugu && farmer.crop == 'Wheat'
-                ? 'గోధుమ'
-                : farmer.cropName,
+            value: CropCatalogueService.findByName(farmer.cropName)
+                    ?.localizedName(isHindi: _isHindi, isTelugu: _isTelugu) ??
+                farmer.cropName,
           ),
           const SizedBox(height: 10),
           _buildRowInfo(
@@ -455,8 +456,8 @@ class _FarmerProcurementStatusScreenState
                 : (_isHindi ? 'बुक किया गया स्लॉट' : 'Booked Slot'),
             value: farmer.bookedSlotTime ?? '11:30 AM',
           ),
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
             key: const ValueKey('btn_procurement_change_crop'),
             onPressed: () async {
               final qtyStr = farmer.quantity.replaceAll(RegExp(r'[^0-9.]'), '');
@@ -468,6 +469,7 @@ class _FarmerProcurementStatusScreenState
                     currentQuantity: currentQty,
                     isHindi: _isHindi,
                     isTelugu: _isTelugu,
+                    showProminentOnly: true,
                   ),
                 ),
               );
@@ -475,20 +477,24 @@ class _FarmerProcurementStatusScreenState
                 setState(() {});
               }
             },
-            icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+            icon: const Icon(Icons.grass_rounded, size: 20),
             label: Text(
               _isTelugu
                   ? 'పంటను మార్చండి'
                   : (_isHindi ? 'फसल बदलें' : 'Change Crop'),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primaryGreen,
-              side: const BorderSide(color: AppColors.primaryGreen),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
               ),
-              minimumSize: const Size(double.infinity, 42),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              minimumSize: const Size(double.infinity, 48),
             ),
           ),
         ],

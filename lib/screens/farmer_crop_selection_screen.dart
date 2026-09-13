@@ -18,12 +18,15 @@ class FarmerCropSelectionScreen extends StatefulWidget {
   final bool isHindi;
   final bool isTelugu;
 
+  final bool showProminentOnly;
+
   const FarmerCropSelectionScreen({
     super.key,
     required this.currentCropName,
     required this.currentQuantity,
     required this.isHindi,
     this.isTelugu = false,
+    this.showProminentOnly = false,
   });
 
   @override
@@ -42,15 +45,18 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
   CropModel? _selectedCrop;
   double _selectedQuantity = 50.0;
   String _searchQuery = '';
+  bool _showOnlyOtherCrops = false;
+  bool _showOnlyProminent = false;
 
   @override
   void initState() {
     super.initState();
     _prefs.addListener(_rebuildOnPrefs);
     _selectedQuantity = widget.currentQuantity;
+    _showOnlyProminent = widget.showProminentOnly;
     // Find initial crop from catalogue
     final existing = CropCatalogueService.findByName(widget.currentCropName);
-    _selectedCrop = existing ?? CropCatalogueService.allCrops.first;
+    _selectedCrop = existing ?? CropCatalogueService.prominent10Crops.first;
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim();
@@ -70,10 +76,18 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
   }
 
   List<CropModel> get _filteredCrops {
-    var crops = _searchQuery.isEmpty
-        ? CropCatalogueService.allCrops
-        : CropCatalogueService.searchCrops(_searchQuery);
-    if (_selectedCategory != null) {
+    List<CropModel> crops;
+    if (_searchQuery.isNotEmpty) {
+      crops = CropCatalogueService.searchCrops(_searchQuery);
+    } else if (_showOnlyOtherCrops) {
+      crops = CropCatalogueService.otherCrops;
+    } else if (_showOnlyProminent) {
+      crops = CropCatalogueService.prominent10Crops;
+    } else {
+      // By default, full catalogue starting with the 10 default crops
+      crops = CropCatalogueService.allCrops;
+    }
+    if (_selectedCategory != null && !_showOnlyProminent && !_showOnlyOtherCrops) {
       crops = crops.where((c) => c.category == _selectedCategory).toList();
     }
     return crops;
@@ -84,15 +98,15 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
     String langCode;
     if (_isTelugu) {
       message =
-          'దయచేసి అందుబాటులో ఉన్న 20+ సేకరణ పంటల కేటలాగ్ (10 ప్రధాన పంటలతో సహా) నుండి మీ పంటను మరియు పరిమాణాన్ని ఎంచుకోండి. ధృవీకరించిన తర్వాత మీ వివరాలు అప్‌డేట్ అవుతాయి.';
+          'దయచేసి 10 ప్రధాన పంటల నుండి లేదా ఇతర పంటల నుండి మీ పంటను మరియు పరిమాణాన్ని ఎంచుకోండి. ధృవీకరించిన తర్వాత వివరాలు అప్‌డేట్ అవుతాయి.';
       langCode = 'te-IN';
     } else if (_isHindi) {
       message =
-          'कृपया उपलब्ध 20+ फसलों की सूची (10 मुख्य फसलों सहित) में से अपनी फसल और मात्रा का चयन करें। पुष्टि के बाद आपका विवरण अपडेट हो जाएगा।';
+          'कृपया 10 मुख्य फसलों या अन्य फसलों में से अपनी फसल और मात्रा चुनें। पुष्टि के बाद विवरण अपडेट हो जाएगा।';
       langCode = 'hi-IN';
     } else {
       message =
-          'Please select your produce from the full crop catalogue with 10 main crops and 20+ varieties, and enter quantity in quintals. Confirming will update your details.';
+          'Please select your crop from the 10 prominent crops or other crops and specify quantity. Confirming will update your produce.';
       langCode = 'en-IN';
     }
 
@@ -183,6 +197,9 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
           ElevatedButton(
             key: const ValueKey('btn_confirm_booking_warning'),
             style: ElevatedButton.styleFrom(
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               backgroundColor: AppColors.primaryGreen,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
@@ -225,6 +242,12 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
               });
             }
 
+            final modalTitle = widget.isTelugu
+                ? 'మీ పంటను ${crop.nameTe}గా మార్చాలా?'
+                : (widget.isHindi
+                    ? 'क्या आप अपनी फसल को ${crop.nameHi} में बदलना चाहते हैं?'
+                    : 'Change your crop to ${crop.cropName}?');
+
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -250,54 +273,87 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryContainer,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(crop.icon,
-                              size: 28, color: AppColors.primaryGreen),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.isTelugu
-                                    ? crop.nameTe
-                                    : (widget.isHindi
-                                        ? crop.nameHi
-                                        : crop.cropName),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                widget.isTelugu
-                                    ? 'పరిమాణాన్ని నిర్ధారించండి'
-                                    : (widget.isHindi
-                                        ? 'उपज मात्रा दर्ज करें'
-                                        : 'Specify Expected Quantity'),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
 
-                    // Quantity Stepper
+                    // Confirmation Title
+                    Text(
+                      modalTitle,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Crop Preview Card
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreen,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(crop.icon,
+                                size: 26, color: Colors.white),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${crop.cropName} (${crop.nameHi} / ${crop.nameTe})',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Govt MSP Rate',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const Text(
+                                      ' • ',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      '₹${mspRate.toStringAsFixed(0)} / Quintal',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primaryGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Quantity Stepper Heading
                     Text(
                       widget.isTelugu
                           ? 'పరిమాణం (క్వింటాళ్ళు):'
@@ -311,6 +367,8 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
+
+                    // -10, -5, [TextField], +5, +10 Stepper
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -323,7 +381,7 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                           label: '-5',
                           onTap: () => updateQty(-5),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         SizedBox(
                           width: 90,
                           child: TextField(
@@ -347,13 +405,15 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                             ),
                             onChanged: (val) {
                               setModalState(() {
-                                _selectedQuantity =
-                                    double.tryParse(val) ?? _selectedQuantity;
+                                final p = double.tryParse(val);
+                                if (p != null && p > 0) {
+                                  _selectedQuantity = p;
+                                }
                               });
                             },
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         _stepperButton(
                           label: '+5',
                           onTap: () => updateQty(5),
@@ -365,123 +425,134 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // MSP Preview Card
+                    // Total Value Preview
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                          horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceVariant,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: AppColors.cardBorder),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.isTelugu
-                                    ? 'ప్రభుత్వ కనీస మద్దతు ధర'
-                                    : (widget.isHindi
-                                        ? 'सरकारी एमएसपी दर'
-                                        : 'Govt MSP Rate'),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              Text(
-                                '₹${mspRate.toStringAsFixed(0)} / Quintal',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            widget.isTelugu
+                                ? 'అంచనా మొత్తం విలువ:'
+                                : (widget.isHindi
+                                    ? 'अनुमानित कुल मूल्य:'
+                                    : 'Est. Total Value:'),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                widget.isTelugu
-                                    ? 'అంచనా మొత్తం విలువ'
-                                    : (widget.isHindi
-                                        ? 'अनुमानित कुल मूल्य'
-                                        : 'Est. Total Value'),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              Text(
-                                '₹${totalEstimatedValue.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primaryGreen,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            '₹${totalEstimatedValue.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primaryGreen,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
-                    // Submit Button
-                    ElevatedButton(
-                      key: const ValueKey('btn_save_crop_selection'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () {
-                        final parsed =
-                            double.tryParse(qtyController.text) ??
-                                _selectedQuantity;
-                        final finalQty = parsed <= 0 ? 50.0 : parsed;
-
-                        ProcurementStateService().changeFarmerCrop(
-                          crop: _selectedCrop!,
-                          quantityQuintals: finalQty,
-                        );
-
-                        Navigator.of(modalCtx).pop();
-                        Navigator.of(context).pop(true);
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              widget.isTelugu
-                                  ? 'పంట విజయవంతంగా ${_selectedCrop!.nameTe}గా మార్చబడింది'
-                                  : (widget.isHindi
-                                      ? 'फसल सफलतापूर्वक ${_selectedCrop!.nameHi} में बदल दी गई'
-                                      : 'Crop successfully changed to ${_selectedCrop!.cropName}'),
+                    // Buttons: Cancel & Confirm
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            key: const ValueKey('btn_cancel_crop_selection'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(color: AppColors.cardBorder),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            backgroundColor: AppColors.primaryGreen,
-                            behavior: SnackBarBehavior.floating,
+                            onPressed: () => Navigator.of(modalCtx).pop(),
+                            child: Text(
+                              widget.isTelugu
+                                  ? 'రద్దు చేయండి'
+                                  : (widget.isHindi ? 'रद्द करें' : 'Cancel'),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                      child: Text(
-                        widget.isTelugu
-                            ? 'పంటను సేవ్ చేసి అప్‌డేట్ చేయండి'
-                            : (widget.isHindi
-                                ? 'फसल सहेजें और अपडेट करें'
-                                : 'Save & Update Crop'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            key: const ValueKey('btn_save_crop_selection'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              final parsed =
+                                  double.tryParse(qtyController.text) ??
+                                      _selectedQuantity;
+                              final finalQty = parsed <= 0 ? 50.0 : parsed.clamp(1.0, 1000.0);
+
+                              try {
+                                ProcurementStateService().changeFarmerCrop(
+                                  crop: _selectedCrop!,
+                                  quantityQuintals: finalQty,
+                                );
+
+                                Navigator.of(modalCtx).pop();
+                                Navigator.of(context).pop(true);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      widget.isTelugu
+                                          ? 'Crop Updated Successfully • పంట విజయవంతంగా నవీకరించబడింది'
+                                          : (widget.isHindi
+                                              ? 'Crop Updated Successfully • फसल सफलतापूर्वक अपडेट की गई'
+                                              : 'Crop Updated Successfully'),
+                                    ),
+                                    backgroundColor: AppColors.primaryGreen,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error updating crop: $e'),
+                                    backgroundColor: Colors.red.shade700,
+                                  ),
+                                );
+                              }
+                            },
+                            child: Text(
+                              widget.isTelugu
+                                  ? 'నిర్ధారించండి'
+                                  : (widget.isHindi
+                                      ? 'पुष्टि करें'
+                                      : 'Confirm'),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -522,7 +593,7 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final crops = _filteredCrops;
-    _selectedCrop ??= crops.isNotEmpty ? crops.first : CropCatalogueService.allCrops.first;
+    _selectedCrop ??= crops.isNotEmpty ? crops.first : CropCatalogueService.prominent10Crops.first;
 
     return Scaffold(
       appBar: AppBar(
@@ -547,27 +618,16 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final isDesktop = width >= ResponsiveLayout.desktopMin;
-          final int crossAxisCount;
-          final double childAspectRatio;
-
-          if (width >= 850) {
-            // On desktop: 5 columns x 2 rows = exactly 10 crops visible at once!
-            crossAxisCount = 5;
-            childAspectRatio = 1.55;
-          } else if (width >= 550) {
-            // On tablet: 4 columns
-            crossAxisCount = 4;
-            childAspectRatio = 1.45;
-          } else {
-            // On mobile: 2 columns x 5 rows
-            crossAxisCount = 2;
-            childAspectRatio = 1.68;
-          }
+          final isTablet = width >= ResponsiveLayout.mobileMax &&
+              width < ResponsiveLayout.desktopMin;
+          final int crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
+          final double childAspectRatio =
+              isDesktop ? 1.25 : (isTablet ? 1.15 : 0.92);
 
           return Center(
             child: SizedBox(
               width: isDesktop ? 980 : width,
-              height: constraints.maxHeight,
+              height: constraints.hasBoundedHeight ? constraints.maxHeight : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -605,58 +665,106 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                         ),
                         const SizedBox(height: 8),
 
-                        // Category Chips Bar
+                        // Category Chips Bar with All, 10 Main Crops, Other Crops, and Categories
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
                               _categoryChip(
+                                key: const ValueKey('chip_filter_all'),
                                 label: _isTelugu
                                     ? 'అన్నీ'
                                     : (_isHindi ? 'सभी' : 'All'),
-                                isSelected: _selectedCategory == null,
-                                onTap: () =>
-                                    setState(() => _selectedCategory = null),
+                                isSelected: _selectedCategory == null &&
+                                    !_showOnlyOtherCrops &&
+                                    !_showOnlyProminent,
+                                onTap: () => setState(() {
+                                  _selectedCategory = null;
+                                  _showOnlyOtherCrops = false;
+                                  _showOnlyProminent = false;
+                                }),
                               ),
                               const SizedBox(width: 8),
                               _categoryChip(
+                                key: const ValueKey('chip_filter_main_10'),
+                                label: _isTelugu
+                                    ? '10 ప్రధాన పంటలు'
+                                    : (_isHindi ? '10 मुख्य फसलें' : '10 Main Crops'),
+                                isSelected: _showOnlyProminent && _selectedCategory == null,
+                                onTap: () => setState(() {
+                                  _selectedCategory = null;
+                                  _showOnlyOtherCrops = false;
+                                  _showOnlyProminent = true;
+                                }),
+                              ),
+                              const SizedBox(width: 8),
+                              _categoryChip(
+                                key: const ValueKey('chip_filter_other'),
+                                label: _isTelugu
+                                    ? 'ఇతర పంటలు'
+                                    : (_isHindi ? 'अन्य फसलें' : 'Other Crops'),
+                                isSelected: _showOnlyOtherCrops && _selectedCategory == null,
+                                onTap: () => setState(() {
+                                  _selectedCategory = null;
+                                  _showOnlyOtherCrops = true;
+                                  _showOnlyProminent = false;
+                                }),
+                              ),
+                              const SizedBox(width: 8),
+                              _categoryChip(
+                                key: const ValueKey('chip_filter_cereals'),
                                 label: _isTelugu
                                     ? 'ధాన్యాలు'
                                     : (_isHindi ? 'अनाज' : 'Cereals'),
                                 isSelected:
                                     _selectedCategory == CropCategory.cereals,
-                                onTap: () => setState(() =>
-                                    _selectedCategory = CropCategory.cereals),
+                                onTap: () => setState(() {
+                                  _selectedCategory = CropCategory.cereals;
+                                  _showOnlyOtherCrops = false;
+                                  _showOnlyProminent = false;
+                                }),
                               ),
                               const SizedBox(width: 8),
                               _categoryChip(
+                                key: const ValueKey('chip_filter_pulses'),
                                 label: _isTelugu
                                     ? 'పప్పుధాన్యాలు'
                                     : (_isHindi ? 'दालें' : 'Pulses'),
                                 isSelected:
                                     _selectedCategory == CropCategory.pulses,
-                                onTap: () => setState(
-                                    () => _selectedCategory = CropCategory.pulses),
+                                onTap: () => setState(() {
+                                  _selectedCategory = CropCategory.pulses;
+                                  _showOnlyOtherCrops = false;
+                                  _showOnlyProminent = false;
+                                }),
                               ),
                               const SizedBox(width: 8),
                               _categoryChip(
+                                key: const ValueKey('chip_filter_oilseeds'),
                                 label: _isTelugu
                                     ? 'నూనెగింజలు'
                                     : (_isHindi ? 'तिलहन' : 'Oilseeds'),
                                 isSelected:
                                     _selectedCategory == CropCategory.oilseeds,
-                                onTap: () => setState(() =>
-                                    _selectedCategory = CropCategory.oilseeds),
+                                onTap: () => setState(() {
+                                  _selectedCategory = CropCategory.oilseeds;
+                                  _showOnlyOtherCrops = false;
+                                  _showOnlyProminent = false;
+                                }),
                               ),
                               const SizedBox(width: 8),
                               _categoryChip(
+                                key: const ValueKey('chip_filter_commercial'),
                                 label: _isTelugu
                                     ? 'వాణిజ్య'
                                     : (_isHindi ? 'व्यावसायिक' : 'Commercial'),
                                 isSelected:
                                     _selectedCategory == CropCategory.commercial,
-                                onTap: () => setState(() =>
-                                    _selectedCategory = CropCategory.commercial),
+                                onTap: () => setState(() {
+                                  _selectedCategory = CropCategory.commercial;
+                                  _showOnlyOtherCrops = false;
+                                  _showOnlyProminent = false;
+                                }),
                               ),
                             ],
                           ),
@@ -666,6 +774,44 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                   ),
 
                   const Divider(height: 1, color: AppColors.cardBorder),
+
+                  if (_showOnlyProminent &&
+                      _selectedCategory == null &&
+                      _searchQuery.isEmpty)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color:
+                            AppColors.primaryContainer.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color:
+                                AppColors.primaryGreen.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 18, color: AppColors.primaryGreen),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _isTelugu
+                                  ? '10 ప్రధాన పంటలు: వరి, మొక్కజొన్న, కందులు, పెసలు, మినుములు, గోధుమలు, వేరుశెనగ, పొద్దుతిరుగుడు, పత్తి, చెరకు'
+                                  : (_isHindi
+                                      ? '10 मुख्य फसलें: धान, मक्का, तूर, मूंग, उड़द, गेहूं, मूंगफली, सूरजमुखी, कपास, गन्ना'
+                                      : '10 Main Crops: Paddy, Maize, Red Gram, Green Gram, Black Gram, Wheat, Groundnut, Sunflower, Cotton, Sugarcane'),
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryGreen,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // Crop Grid
                   Expanded(
@@ -696,12 +842,12 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                               childAspectRatio: childAspectRatio,
                             ),
                             itemCount: crops.length,
-                              itemBuilder: (context, index) {
-                                final crop = crops[index];
-                                final isSelected = _selectedCrop?.id == crop.id;
-                                return _cropCard(crop, isSelected);
-                              },
-                            ),
+                            itemBuilder: (context, index) {
+                              final crop = crops[index];
+                              final isSelected = _selectedCrop?.id == crop.id;
+                              return _cropCard(crop, isSelected);
+                            },
+                          ),
                   ),
 
                   // Bottom Action Bar
@@ -763,13 +909,17 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                               ),
                             ),
                           ],
+                          if (_selectedCrop == null) const Spacer(),
+                          const SizedBox(width: 8),
                           ElevatedButton(
                             key: const ValueKey('btn_proceed_crop_selection'),
                             style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(120, 44),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               backgroundColor: AppColors.primaryGreen,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 12),
+                                  horizontal: 16, vertical: 10),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -803,11 +953,13 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
   }
 
   Widget _categoryChip({
+    Key? key,
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
     return ChoiceChip(
+      key: key,
       label: Text(
         label,
         style: TextStyle(
@@ -824,12 +976,16 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
   }
 
   Widget _cropCard(CropModel crop, bool isSelected) {
+    final mspRate = PaymentCalculationService.getMspRate(crop.cropName);
     final primaryName = _isTelugu
         ? crop.nameTe
         : (_isHindi ? crop.nameHi : crop.cropName);
     final secondaryName = _isTelugu || _isHindi
         ? crop.cropName
         : crop.nameHi;
+    final thirdName = _isTelugu
+        ? crop.nameHi
+        : (_isHindi ? crop.nameTe : crop.nameTe);
 
     return InkWell(
       key: ValueKey('crop_card_${crop.id}'),
@@ -838,23 +994,25 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
           _selectedCrop = crop;
         });
       },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryContainer : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected
+              ? AppColors.primaryContainer.withValues(alpha: 0.7)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected ? AppColors.primaryGreen : AppColors.cardBorder,
-            width: isSelected ? 2.0 : 1.0,
+            width: isSelected ? 2.5 : 1.0,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.primaryGreen.withValues(alpha: 0.16)
+                  ? AppColors.primaryGreen.withValues(alpha: 0.18)
                   : Colors.black.withValues(alpha: 0.03),
-              blurRadius: isSelected ? 6 : 3,
+              blurRadius: isSelected ? 8 : 3,
               offset: const Offset(0, 2),
             ),
           ],
@@ -863,11 +1021,12 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            // Row 1: Crop Icon + Selection Radio
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primaryGreen
@@ -891,25 +1050,98 @@ class _FarmerCropSelectionScreenState extends State<FarmerCropSelectionScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 3),
+
+            // Row 2: Primary Name (localized)
             Text(
               primaryName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.bold,
                 color:
                     isSelected ? AppColors.primaryGreen : AppColors.textPrimary,
               ),
             ),
+
+            // Row 3: Secondary Name
             Text(
               secondaryName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 10.5,
+                fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary,
+              ),
+            ),
+
+            // Row 4: Third Name
+            Text(
+              thirdName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 9.5,
+                color: AppColors.textSecondary,
+              ),
+            ),
+
+            // Row 5: MSP Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                'MSP: ₹${mspRate.toStringAsFixed(0)}/Qtl',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryGreen,
+                ),
+              ),
+            ),
+
+            // Row 6: Select Button
+            SizedBox(
+              height: 26,
+              width: double.infinity,
+              child: ElevatedButton(
+                key: ValueKey('btn_select_${crop.id}'),
+                onPressed: () {
+                  setState(() {
+                    _selectedCrop = crop;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor: isSelected
+                      ? AppColors.primaryGreen
+                      : AppColors.surfaceVariant,
+                  foregroundColor:
+                      isSelected ? Colors.white : AppColors.primaryGreen,
+                  elevation: 0,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: Text(
+                  isSelected
+                      ? (_isTelugu
+                          ? 'ఎంచుకోబడింది'
+                          : (_isHindi ? 'चयनित' : 'Selected'))
+                      : (_isTelugu
+                          ? 'ఎంచుకోండి'
+                          : (_isHindi ? 'चुनें' : 'Select')),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
